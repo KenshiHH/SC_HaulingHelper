@@ -6,6 +6,8 @@ import os
 
 
 
+
+
 ####config
 bDebug = True
 
@@ -13,6 +15,8 @@ root = tk.Tk()
 
 screen_width = root.winfo_screenwidth()
 screen_height = root.winfo_screenheight()
+
+root.destroy() # destroys initial window
 
 bShowSorted = True
 
@@ -22,9 +26,6 @@ class SortedMissionClass:
         self.dropOfLocation = ""
         self.cargo = []
 
-    #dropOfLocation = ""
-    #cargo = []
-
     def printInfo(self):
         print(f"Drop of Location: {self.dropOfLocation}")
         for i in self.cargo:
@@ -33,9 +34,8 @@ class SortedMissionClass:
 
 class MainSortedMissionClass:
 
-    SortedMissions: SortedMissionClass = []
     def __init__(self):
-        self.SortedMissions = []
+        self.SortedMissions: SortedMissionClass = []
 
     def addSortedMissions(self,DropLocation:str, SCU:int, Item:str):
         bDropLocationFound = False
@@ -83,15 +83,6 @@ class SubMissionClass:
             "PickupLocation": ""
         }
 
-    Item = ""
-    PickupLocation = ""
-
-    DropLocations = []
-
-    PickupInfo = {
-        "Item": "",
-        "PickupLocation": ""
-        }
     
     def addPickupInfo(self, Item:str, PickupLocation:str):
         self.Item = Item
@@ -113,9 +104,7 @@ class SubMissionClass:
   
 class MainMissionClass:
     def __init__(self):
-        self.subMissions = []
-
-    subMissions: SubMissionClass = []
+        self.subMissions: SubMissionClass = []
 
     def addSubMission(self, subMission: SubMissionClass):
         self.subMissions.append(subMission)
@@ -127,9 +116,8 @@ class MainMissionClass:
 
 class MissionClass:
     def __init__(self):
-        self.MainMissions = []
+        self.MainMissions: MainMissionClass = []
 
-    MainMissions: MainMissionClass = []
 
     def addMainMission(self, mainMission: MainMissionClass):
         self.MainMissions.append(mainMission)
@@ -226,7 +214,9 @@ def ShowMissions():
 def checkForInput():
     global SortedMissions
     while True:
-        print("\n\n        NO MISSIONS AVAILABLE\n\n      press 'a' to add missions\n\n")
+        if len(MissionList.MainMissions) <= 0:
+            print("\n\n             NO MISSIONS AVAILABLE\n\n           press 'a' to add missions\n\n")
+
         key = input(f"\n\n|  'a' add mission  |  '1-{len(MissionList.MainMissions)}' remove mission  |  't' toggle Mission Listing  |  'q' quit  |\nselect: ").lower().replace(" ","")
         
         if key == "t":
@@ -243,6 +233,8 @@ def checkForInput():
                 removeIndex = int(key)
                 if removeIndex <= len(MissionList.MainMissions):
                     MissionList.reomveMainMissions(removeIndex)
+                    os.system('cls')
+                    MissionList.printMainMissions()
 
             except ValueError:
                 print("not a valid mission number input")
@@ -250,7 +242,4 @@ def checkForInput():
     print("Goodbye")
 
 
-
-
 checkForInput()
-
