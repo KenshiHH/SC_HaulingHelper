@@ -6,8 +6,6 @@ import os
 
 
 
-
-
 ####config
 bDebug = True
 
@@ -220,6 +218,7 @@ def checkForInput():
         key = input(f"\n\n|  'a' add mission  |  '1-{len(MissionList.MainMissions)}' remove mission  |  't' toggle Mission Listing  |  'q' quit  |\nselect: ").lower().replace(" ","")
         
         if key == "t":
+            os.system('cls')
             ShowMissions()
         
         elif key == "a":
