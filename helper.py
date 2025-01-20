@@ -35,19 +35,19 @@ class MainSortedMissionClass:
     def __init__(self):
         self.SortedMissions: SortedMissionClass = []
 
-    def addSortedMissions(self,DropLocation:str, SCU:int, Item:str):
+    def addSortedMissions(self,DropLocation:str, SCU:int, Item:str, MissionID:int):
         bDropLocationFound = False
 
 
         for i in self.SortedMissions:
                 if DropLocation == i.dropOfLocation:
                     bDropLocationFound = True
-                    i.cargo.append([SCU,Item])
+                    i.cargo.append([SCU,Item,MissionID])
 
         if not bDropLocationFound:
             newSortedMissions = SortedMissionClass()
             newSortedMissions.dropOfLocation = DropLocation
-            newSortedMissions.cargo.append([SCU,Item])
+            newSortedMissions.cargo.append([SCU,Item,MissionID])
             self.SortedMissions.append(newSortedMissions)
 
 
@@ -58,7 +58,7 @@ class MainSortedMissionClass:
         for i in MissionList.MainMissions:
             for j in i.subMissions:
                 for k in j.DropLocations:
-                    self.addSortedMissions(k['DropLocation'], k['SCU'], j.Item)
+                    self.addSortedMissions(k['DropLocation'], k['SCU'], j.Item,i.MissionID)
 
         self.SortedMissions.sort(key=lambda x: x.dropOfLocation) # Sort by Drop Location Name
         self.printSortedMissions()
@@ -69,7 +69,7 @@ class MainSortedMissionClass:
         for i in self.SortedMissions:
             print(f"{i.dropOfLocation}:")
             for j in i.cargo:
-                print(f"   - SCU: {j[0]} - {j[1]}")
+                print(f"   - SCU: {j[0]} \t {j[1]}\t\t\tMission# {str(j[2])}")
 
 class SubMissionClass:
     def __init__(self):
@@ -103,6 +103,7 @@ class SubMissionClass:
 class MainMissionClass:
     def __init__(self):
         self.subMissions: SubMissionClass = []
+        self.MissionID = 0
 
     def addSubMission(self, subMission: SubMissionClass):
         self.subMissions.append(subMission)
@@ -118,7 +119,10 @@ class MissionClass:
 
 
     def addMainMission(self, mainMission: MainMissionClass):
+        mainMission.MissionID = len(self.MainMissions)+1
+        print(f"mainMission.MissionID {mainMission.MissionID}")
         self.MainMissions.append(mainMission)
+
 
     def printMainMissions(self):
         for index, i in enumerate(self.MainMissions):
