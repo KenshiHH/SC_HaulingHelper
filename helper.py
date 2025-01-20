@@ -69,7 +69,7 @@ class MainSortedMissionClass:
         for i in self.SortedMissions:
             print(f"{i.dropOfLocation}:")
             for j in i.cargo:
-                print(f"   - SCU: {j[0]} Item: {j[1]}")
+                print(f"   - SCU: {j[0]} - {j[1]}")
 
 class SubMissionClass:
     def __init__(self):
@@ -151,6 +151,15 @@ def getScreenShot():
 
 def getMissionDetails(text):
 
+    stringFixes = {
+        '$':"S",
+        'S1DC06':'S1DCO6',
+        'HUR-LS':'HUR-L5',
+        'S1DCO06':'S1DCO6',
+        'HUR-L55':'HUR-L5'
+
+    }
+
     text =text.replace('© ', '') #cleanup
     missionText = []
 
@@ -181,7 +190,8 @@ def getMissionDetails(text):
                     bFoundPickup = True
 
                 if "Deliver" in i:
-                    i = i.replace('$',"S").replace('  ',' ').replace('S1DC06','S1DCO6')
+                    for k in stringFixes:
+                        i = i.replace(k,stringFixes[k]) # fix commong ocr errors
 
                     scu = i.split("Deliver 0/")[1].split(" SCU")[0]
                     target = i.split("to ")[1].replace('\n'," ")
@@ -215,7 +225,7 @@ def checkForInput():
         if len(MissionList.MainMissions) <= 0:
             print("\n\n             NO MISSIONS AVAILABLE\n\n           press 'a' to add missions\n\n")
 
-        key = input(f"\n\n|  'a' add mission  |  '1-{len(MissionList.MainMissions)}' remove mission  |  't' toggle Mission Listing  |  'q' quit  |\nselect: ").lower().replace(" ","")
+        key = input(f"\n\n|  'a' add mission  |  '1-{len(MissionList.MainMissions)}' remove mission  |  't' toggle Mission Listing  |  'q' quit  |\n\nselect: ").lower().replace(" ","")
         
         if key == "t":
             os.system('cls')
