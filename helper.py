@@ -3,11 +3,15 @@ import pytesseract
 import tkinter as tk
 import time
 import os
+from flask import Flask
+from flask_scss import Scss
+from flask import render_template
+from flask import request
 
 
 
 ####config
-bDebug = True
+bDebug = False
 
 root = tk.Tk()
 
@@ -17,6 +21,8 @@ screen_height = root.winfo_screenheight()
 root.destroy() # destroys initial window
 
 bShowSorted = True
+
+app = Flask(__name__)
 
 
 class SortedMissionClass:
@@ -97,9 +103,14 @@ class SubMissionClass:
         print(f"    Collect {self.Item} from {self.PickupLocation}")
         for i in self.DropLocations:
             print(f"      - Deliver {i['SCU']} SCU to {i['DropLocation']}")
+    
+    def getMissionText(self):
+        return f"Collect {self.Item} from {self.PickupLocation}"
+    
+    def getTest(self):
+        return "hello world"
 
 
-  
 class MainMissionClass:
     def __init__(self):
         self.subMissions: SubMissionClass = []
@@ -111,6 +122,10 @@ class MainMissionClass:
     def printSubMissions(self):
         for i in self.subMissions:
                 i.getMissionDetails()
+    
+    def getID(self):
+        return str(self.MissionID)
+    
 
 
 class MissionClass:
@@ -119,6 +134,7 @@ class MissionClass:
 
 
     def addMainMission(self, mainMission: MainMissionClass):
+        
         mainMission.MissionID = len(self.MainMissions)+1
         print(f"mainMission.MissionID {mainMission.MissionID}")
         self.MainMissions.append(mainMission)
@@ -255,4 +271,26 @@ def checkForInput():
     print("Goodbye")
 
 
-checkForInput()
+#checkForInput()
+
+if bDebug: # creates test missions
+    newMission = MainMissionClass()
+    newSubMission = SubMissionClass()
+    newSubMission.addPickupInfo("Stims", "Everus Harbor")
+    newSubMission.addDropLocation("Stims", 1, "Port Tresser")
+    newSubMission.addDropLocation("Stims", 12, "Pyro")
+    newMission.addSubMission(newSubMission)
+    newMission.MissionID = 1
+    MissionList.addMainMission(newMission)
+
+
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    if request.method == 'POST':
+        getScreenShot()
+        return render_template('index.html', missionList=MissionList)
+    else:
+        return render_template('index.html', missionList=MissionList)
+    
+if __name__ == '__main__':
+    app.run(debug=True)
