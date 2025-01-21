@@ -303,7 +303,6 @@ def delete(id):
 
 @app.route('/add/')
 def AddMission():
-    print("addin mission via button")
     getScreenShot()
     SortedMissions.CheckForMissions()
     return redirect("/")
