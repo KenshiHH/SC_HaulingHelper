@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block head %} <title>SC Hauling Helper</title> {% endblock head %}
+
+  {% block body %}
+  <div class="content">
+    <table class="Header">
+      <tr>
+      <a href="/toggle/" class="togglebtn">Toggle View<a/>
+      </tr>
+      <tr>
+        <h1>SC Hauling Helper </h1>
+      </tr>
+      <tr>
+        <form action="/add/"><input type="submit" value="Add Mission" id="btn_add"/></form>
+      </tr>
+      </table>
+  {% if missionList.MainMissions | length < 1 %}
+  <h1>Press Button do Add Mission</h1>
+  {% else %}
+  {% for MainMissions in missionList.MainMissions %}
+  <table class="Mission">
+      {% for subMissions in MainMissions.subMissions %}
+      <tr class="PickupLocation">
+        <th>({{ MainMissions.getID() }}) {{ subMissions.getMissionText() }} <a href="/delete/{{ MainMissions.getID() }}" class="close">X</></th>
+      </tr>
+      {% for dropLocations in subMissions.DropLocations %}
+      <tr class="Cargo">
+        <td>- Deliver {{ dropLocations['SCU'] }} SCU to {{ dropLocations['DropLocation'] }}</td>
+      </tr>
+      {% endfor %}
+      {% endfor %}
+    </table>
+  {% endfor %}
+  {% endif %}
+</div>
+
+{% endblock body %}

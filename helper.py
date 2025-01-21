@@ -3,11 +3,15 @@ import pytesseract
 import tkinter as tk
 import time
 import os
-
+from flask import Flask
+from flask_scss import Scss
+from flask import render_template
+from flask import request
+from flask import redirect
 
 
 ####config
-bDebug = True
+bDebug = False
 
 root = tk.Tk()
 
@@ -16,7 +20,9 @@ screen_height = root.winfo_screenheight()
 
 root.destroy() # destroys initial window
 
-bShowSorted = True
+bShowSorted = False
+
+app = Flask(__name__)
 
 
 class SortedMissionClass:
@@ -61,7 +67,7 @@ class MainSortedMissionClass:
                     self.addSortedMissions(k['DropLocation'], k['SCU'], j.Item,i.MissionID)
 
         self.SortedMissions.sort(key=lambda x: x.dropOfLocation) # Sort by Drop Location Name
-        self.printSortedMissions()
+        #self.printSortedMissions()
 
         
 
@@ -97,9 +103,14 @@ class SubMissionClass:
         print(f"    Collect {self.Item} from {self.PickupLocation}")
         for i in self.DropLocations:
             print(f"      - Deliver {i['SCU']} SCU to {i['DropLocation']}")
+    
+    def getMissionText(self):
+        return f"Collect {self.Item} from {self.PickupLocation}"
+    
+    def getTest(self):
+        return "hello world"
 
 
-  
 class MainMissionClass:
     def __init__(self):
         self.subMissions: SubMissionClass = []
@@ -111,6 +122,10 @@ class MainMissionClass:
     def printSubMissions(self):
         for i in self.subMissions:
                 i.getMissionDetails()
+    
+    def getID(self):
+        return str(self.MissionID)
+    
 
 
 class MissionClass:
@@ -119,9 +134,14 @@ class MissionClass:
 
 
     def addMainMission(self, mainMission: MainMissionClass):
+        
         mainMission.MissionID = len(self.MainMissions)+1
         print(f"mainMission.MissionID {mainMission.MissionID}")
         self.MainMissions.append(mainMission)
+
+    def updateMissionIDs(self):
+        for i in self.MainMissions:
+            i.MissionID = self.MainMissions.index(i)+1
 
 
     def printMainMissions(self):
@@ -133,11 +153,8 @@ class MissionClass:
             del self.MainMissions[int-1]
         except:
             print("error deleting Mission"+str(int))
-                 
-    def createSortedMissions(self):
-        global SortedMissions
-        SortedMissions = []
-        
+        self.updateMissionIDs()
+                         
 
 
 MissionList = MissionClass()
@@ -255,4 +272,48 @@ def checkForInput():
     print("Goodbye")
 
 
-checkForInput()
+#checkForInput()
+
+if bDebug: # creates test missions
+    newMission = MainMissionClass()
+    newSubMission = SubMissionClass()
+    newSubMission.addPickupInfo("Stims", "Everus Harbor")
+    newSubMission.addDropLocation("Stims", 1, "Port Tresser")
+    newSubMission.addDropLocation("Stims", 12, "Pyro")
+    newMission.addSubMission(newSubMission)
+    newMission.MissionID = 1
+    MissionList.addMainMission(newMission)
+
+
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    global bShowSorted
+    if bShowSorted:
+        return render_template('index2.html', sortedMissionList=SortedMissions)
+    else:
+        return render_template('index.html', missionList=MissionList)
+
+    
+@app.route('/delete/<id>')
+def delete(id):
+    global MissionList
+    MissionList.reomveMainMissions(int(id))
+    SortedMissions.CheckForMissions()
+    return redirect("/")
+
+@app.route('/add/')
+def AddMission():
+    print("addin mission via button")
+    getScreenShot()
+    SortedMissions.CheckForMissions()
+    return redirect("/")
+
+@app.route('/toggle/')
+def ToggleView():
+    global bShowSorted
+    bShowSorted = not bShowSorted
+    return redirect("/")
+
+
+if __name__ == '__main__':
+    app.run(debug=True)
