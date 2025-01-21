@@ -4,7 +4,6 @@ import tkinter as tk
 from flask import Flask
 from flask_scss import Scss
 from flask import render_template
-from flask import request
 from flask import redirect
 
 
