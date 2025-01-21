@@ -38,8 +38,8 @@ body {
 }
 
 .Cargo {
-  color: gray;
-  font-family: "Trebuchet MS", "Lucida Sans Unicode", "Lucida Grande", "Lucida Sans", Arial, sans-serif;
+  color: rgb(150, 150, 150);
+  font-family: "Franklin Gothic Medium", "Arial Narrow", Arial, sans-serif;
   text-align: left;
   text-indent: 30px;
 }
@@ -76,4 +76,8 @@ body {
 
 .close:after {
   transform: rotate(-45deg);
+}
+
+.scutext {
+  font-size: x-small;
 }/*# sourceMappingURL=style.css.map */

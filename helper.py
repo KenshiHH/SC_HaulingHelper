@@ -1,8 +1,6 @@
 from PIL import ImageGrab
 import pytesseract
 import tkinter as tk
-import time
-import os
 from flask import Flask
 from flask_scss import Scss
 from flask import render_template
@@ -44,7 +42,6 @@ class MainSortedMissionClass:
     def addSortedMissions(self,DropLocation:str, SCU:int, Item:str, MissionID:int):
         bDropLocationFound = False
 
-
         for i in self.SortedMissions:
                 if DropLocation == i.dropOfLocation:
                     bDropLocationFound = True
@@ -56,7 +53,6 @@ class MainSortedMissionClass:
             newSortedMissions.cargo.append([SCU,Item,MissionID])
             self.SortedMissions.append(newSortedMissions)
 
-
     def CheckForMissions(self):
         global MissionList
         self.SortedMissions.clear()
@@ -67,9 +63,6 @@ class MainSortedMissionClass:
                     self.addSortedMissions(k['DropLocation'], k['SCU'], j.Item,i.MissionID)
 
         self.SortedMissions.sort(key=lambda x: x.dropOfLocation) # Sort by Drop Location Name
-        #self.printSortedMissions()
-
-        
 
     def printSortedMissions(self):
         for i in self.SortedMissions:
@@ -87,7 +80,6 @@ class SubMissionClass:
             "PickupLocation": ""
         }
 
-    
     def addPickupInfo(self, Item:str, PickupLocation:str):
         self.Item = Item
         self.PickupLocation = PickupLocation
@@ -105,10 +97,7 @@ class SubMissionClass:
             print(f"      - Deliver {i['SCU']} SCU to {i['DropLocation']}")
     
     def getMissionText(self):
-        return f"Collect {self.Item} from {self.PickupLocation}"
-    
-    def getTest(self):
-        return "hello world"
+        return f"{self.Item} from {self.PickupLocation}"
 
 
 class MainMissionClass:
@@ -153,8 +142,7 @@ class MissionClass:
             del self.MainMissions[int-1]
         except:
             print("error deleting Mission"+str(int))
-        self.updateMissionIDs()
-                         
+        self.updateMissionIDs()                        
 
 
 MissionList = MissionClass()
@@ -166,7 +154,7 @@ def getScreenShot():
     bbox = (screen_width*0.62, screen_height*0.25, screen_width*0.9, screen_height*0.70)
     screenshot = ImageGrab.grab(bbox)
 
-    text = pytesseract.image_to_string(screenshot,config='--psm 6')
+    text = pytesseract.image_to_string(screenshot,config='--psm 6 --oem 1')
 
     getMissionDetails(text)
 
@@ -191,9 +179,9 @@ def getMissionDetails(text):
 
     ocrArray = missionText
     global MissionList
-     
+
     newMission = MainMissionClass()
-      
+
     try:
         for i in ocrArray:
             bFoundPickup = False
@@ -226,53 +214,6 @@ def getMissionDetails(text):
     
     except Exception as error:
         print("An exception occurred:", error)
-
-def ShowMissions():
-    global bShowSorted
-
-    if bShowSorted:
-        os.system('cls')
-        SortedMissions.CheckForMissions()
-    else:
-        os.system('cls')
-        MissionList.printMainMissions()
-
-    bShowSorted = not bShowSorted      
-
-
-def checkForInput():
-    global SortedMissions
-    while True:
-        if len(MissionList.MainMissions) <= 0:
-            print("\n\n             NO MISSIONS AVAILABLE\n\n           press 'a' to add missions\n\n")
-
-        key = input(f"\n\n|  'a' add mission  |  '1-{len(MissionList.MainMissions)}' remove mission  |  't' toggle Mission Listing  |  'q' quit  |\n\nselect: ").lower().replace(" ","")
-        
-        if key == "t":
-            os.system('cls')
-            ShowMissions()
-        
-        elif key == "a":
-            getScreenShot()
-            os.system('cls')
-            MissionList.printMainMissions()
-        elif key == "q":
-            break
-        else:
-            try:
-                removeIndex = int(key)
-                if removeIndex <= len(MissionList.MainMissions):
-                    MissionList.reomveMainMissions(removeIndex)
-                    os.system('cls')
-                    MissionList.printMainMissions()
-
-            except ValueError:
-                print("not a valid mission number input")
-        time.sleep(0.2)
-    print("Goodbye")
-
-
-#checkForInput()
 
 if bDebug: # creates test missions
     newMission = MainMissionClass()
