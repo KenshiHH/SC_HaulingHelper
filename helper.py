@@ -225,7 +225,7 @@ if bDebug: # creates test missions
     MissionList.addMainMission(newMission)
 
 
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/')
 def index():
     global bShowSorted
     if bShowSorted:
