@@ -7,7 +7,7 @@ from flask import Flask
 from flask_scss import Scss
 from flask import render_template
 from flask import request
-
+from flask import redirect
 
 
 ####config
@@ -20,7 +20,7 @@ screen_height = root.winfo_screenheight()
 
 root.destroy() # destroys initial window
 
-bShowSorted = True
+bShowSorted = False
 
 app = Flask(__name__)
 
@@ -67,7 +67,7 @@ class MainSortedMissionClass:
                     self.addSortedMissions(k['DropLocation'], k['SCU'], j.Item,i.MissionID)
 
         self.SortedMissions.sort(key=lambda x: x.dropOfLocation) # Sort by Drop Location Name
-        self.printSortedMissions()
+        #self.printSortedMissions()
 
         
 
@@ -139,6 +139,10 @@ class MissionClass:
         print(f"mainMission.MissionID {mainMission.MissionID}")
         self.MainMissions.append(mainMission)
 
+    def updateMissionIDs(self):
+        for i in self.MainMissions:
+            i.MissionID = self.MainMissions.index(i)+1
+
 
     def printMainMissions(self):
         for index, i in enumerate(self.MainMissions):
@@ -149,11 +153,8 @@ class MissionClass:
             del self.MainMissions[int-1]
         except:
             print("error deleting Mission"+str(int))
-                 
-    def createSortedMissions(self):
-        global SortedMissions
-        SortedMissions = []
-        
+        self.updateMissionIDs()
+                         
 
 
 MissionList = MissionClass()
@@ -286,11 +287,33 @@ if bDebug: # creates test missions
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    if request.method == 'POST':
-        getScreenShot()
-        return render_template('index.html', missionList=MissionList)
+    global bShowSorted
+    if bShowSorted:
+        return render_template('index2.html', sortedMissionList=SortedMissions)
     else:
         return render_template('index.html', missionList=MissionList)
+
     
+@app.route('/delete/<id>')
+def delete(id):
+    global MissionList
+    MissionList.reomveMainMissions(int(id))
+    SortedMissions.CheckForMissions()
+    return redirect("/")
+
+@app.route('/add/')
+def AddMission():
+    print("addin mission via button")
+    getScreenShot()
+    SortedMissions.CheckForMissions()
+    return redirect("/")
+
+@app.route('/toggle/')
+def ToggleView():
+    global bShowSorted
+    bShowSorted = not bShowSorted
+    return redirect("/")
+
+
 if __name__ == '__main__':
     app.run(debug=True)
