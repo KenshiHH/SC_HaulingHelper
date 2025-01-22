@@ -15,18 +15,18 @@
         <form action="/add/"><input type="submit" value="Add Mission" id="btn_add"/></form>
       </tr>
       </table>
-  {% if missionList.MainMissions | length < 1 %}
+  {% if missionList.mainMissions | length < 1 %}
   <h1>Press Button do Add Mission</h1>
   {% else %}
-  {% for MainMissions in missionList.MainMissions %}
+  {% for mainMissions in missionList.mainMissions %}
   <table class="Mission">
-      {% for subMissions in MainMissions.subMissions %}
+      {% for subMissions in mainMissions.subMissions %}
       <tr class="PickupLocation">
-        <th>({{ MainMissions.getID() }}) {{ subMissions.getMissionText() }} <a href="/delete/{{ MainMissions.getID() }}" class="close">X</></th>
+        <th>({{ mainMissions.GetID() }}) {{ subMissions.GetMissionText() }} <a href="/delete/{{ mainMissions.GetID() }}" class="close">X</></th>
       </tr>
-      {% for dropLocations in subMissions.DropLocations %}
+      {% for dropLocations in subMissions.dropLocations %}
       <tr class="Cargo">
-        <td>- Deliver {{ dropLocations['SCU'] }} SCU to {{ dropLocations['DropLocation'] }}</td>
+        <td>- Deliver {{ dropLocations['SCU'] }}<span class="scutext">SCU</span> to {{ dropLocations['DropLocation'] }}</td>
       </tr>
       {% endfor %}
       {% endfor %}

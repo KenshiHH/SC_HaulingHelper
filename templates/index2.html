@@ -12,24 +12,24 @@
         <h1>SC Hauling Helper </h1>
       </tr>
       <tr>
-        <form action="/add/", method="post"><input type="submit" value="Add Mission" id="btn_add"/></form>
+        <form action="/add/"><input type="submit" value="Add Mission" id="btn_add"/></form>
       </tr>
       </table>
-  {% if sortedMissionList.SortedMissions | length < 1 %}
+  {% if sortedMissionList.sortedMissions | length < 1 %}
   <h1>Press Button do Add Mission</h1>
   {% else %}
-  {% for sortedMission in sortedMissionList.SortedMissions %}
+  {% for sortedMission in sortedMissionList.sortedMissions %}
   <div class="Mission">
   <table>
       <tr>
-        <th class="DropOffLocation">{{ sortedMission.dropOfLocation }}</th>
+        <th class="dropOffLocation">{{ sortedMission.dropOfLocation }}</th>
         <th></th>
         <th></th>
         <th></th>
       </tr>
       {% for cargo in sortedMission.cargo %}
       <tr class="Cargo">
-        <td>- {{ cargo[0] }} SCU   {{ cargo[1] }}</td>
+        <td>- {{ cargo[0] }}<span class="scutext">SCU</span> {{ cargo[1] }}</td>
       </tr>
       {% endfor %}
     </table>
