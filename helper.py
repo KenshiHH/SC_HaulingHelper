@@ -120,6 +120,7 @@ class MissionClass:
     def __init__(self):
         self.MainMissions: MainMissionClass = []
         self.cargoSCU = 0
+        self.SortedMissions = MainSortedMissionClass()
 
     def addMainMission(self, mainMission: MainMissionClass):
         self.MainMissions.append(mainMission)
@@ -150,19 +151,14 @@ class MissionClass:
 
 
 MissionList = MissionClass()
-SortedMissions = MainSortedMissionClass()
 
 
-def getScreenShot():
+def getMissionDetails():
 
     bbox = (screen_width*0.62, screen_height*0.25, screen_width*0.9, screen_height*0.70)
     screenshot = ImageGrab.grab(bbox)
 
     text = pytesseract.image_to_string(screenshot,config='--psm 6 --oem 1')
-
-    getMissionDetails(text)
-
-def getMissionDetails(text):
 
     stringFixes = {
         '$':"S",
@@ -231,21 +227,20 @@ if bDebug: # creates test missions
 def index():
     global bShowSorted
     if bShowSorted:
-        return render_template('index2.html', sortedMissionList=SortedMissions)
+        return render_template('index2.html', sortedMissionList=MissionList.SortedMissions)
     else:
         return render_template('index.html', missionList=MissionList)
 
 @app.route('/delete/<id>')
 def delete(id):
-    global MissionList
     MissionList.reomveMainMissions(int(id))
-    SortedMissions.CheckForMissions()
+    MissionList.SortedMissions.CheckForMissions()
     return redirect("/")
 
 @app.route('/add/')
 def AddMission():
-    getScreenShot()
-    SortedMissions.CheckForMissions()
+    getMissionDetails()
+    MissionList.SortedMissions.CheckForMissions()
     return redirect("/")
 
 @app.route('/toggle/')
