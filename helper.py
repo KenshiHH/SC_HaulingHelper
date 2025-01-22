@@ -119,29 +119,34 @@ class MainMissionClass:
 class MissionClass:
     def __init__(self):
         self.MainMissions: MainMissionClass = []
-
+        self.cargoSCU = 0
 
     def addMainMission(self, mainMission: MainMissionClass):
-        
-        mainMission.MissionID = len(self.MainMissions)+1
-        print(f"mainMission.MissionID {mainMission.MissionID}")
         self.MainMissions.append(mainMission)
+        self.updateMissionIDs()
+        self.updateCargoSCU()
 
     def updateMissionIDs(self):
         for i in self.MainMissions:
             i.MissionID = self.MainMissions.index(i)+1
 
+    def updateCargoSCU(self):
+        self.cargoSCU = 0
+        for i in self.MainMissions:
+            for j in i.subMissions:
+                for k in j.DropLocations:
+                    self.cargoSCU += k['SCU']
 
-    def printMainMissions(self):
-        for index, i in enumerate(self.MainMissions):
-            print(f"Mission: {index+1}")
-            i.printSubMissions()
+    def getCargoSCU(self):
+        return self.cargoSCU
+
     def reomveMainMissions(self,int):
         try:
             del self.MainMissions[int-1]
         except:
             print("error deleting Mission"+str(int))
-        self.updateMissionIDs()                        
+        self.updateMissionIDs()
+        self.updateCargoSCU()                       
 
 
 MissionList = MissionClass()
@@ -165,7 +170,6 @@ def getMissionDetails(text):
         'HUR-LS':'HUR-L5',
         'S1DCO06':'S1DCO6',
         'HUR-L55':'HUR-L5'
-
     }
 
     text =text.replace('© ', '') #cleanup
@@ -208,9 +212,7 @@ def getMissionDetails(text):
             newMission.addSubMission(newSubMission)
         if bFoundPickup:
             MissionList.addMainMission(newMission)
-                
 
-    
     except Exception as error:
         print("An exception occurred:", error)
 
@@ -233,7 +235,6 @@ def index():
     else:
         return render_template('index.html', missionList=MissionList)
 
-    
 @app.route('/delete/<id>')
 def delete(id):
     global MissionList
@@ -255,4 +256,4 @@ def ToggleView():
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False)
