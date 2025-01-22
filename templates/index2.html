@@ -15,14 +15,14 @@
         <form action="/add/"><input type="submit" value="Add Mission" id="btn_add"/></form>
       </tr>
       </table>
-  {% if sortedMissionList.SortedMissions | length < 1 %}
+  {% if sortedMissionList.sortedMissions | length < 1 %}
   <h1>Press Button do Add Mission</h1>
   {% else %}
-  {% for sortedMission in sortedMissionList.SortedMissions %}
+  {% for sortedMission in sortedMissionList.sortedMissions %}
   <div class="Mission">
   <table>
       <tr>
-        <th class="DropOffLocation">{{ sortedMission.dropOfLocation }}</th>
+        <th class="dropOffLocation">{{ sortedMission.dropOfLocation }}</th>
         <th></th>
         <th></th>
         <th></th>

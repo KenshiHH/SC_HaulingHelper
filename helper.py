@@ -51,8 +51,8 @@ class SortedMissionManager:
 
         for i in missionDatabase.mainMissions:
             for j in i.subMissions:
-                for k in j.DropLocations:
-                    self.AddSortedMissions(k['DropLocation'], k['SCU'], j.Item,i.MissionID)
+                for k in j.dropLocations:
+                    self.AddSortedMissions(k['DropLocation'], k['SCU'], j.item,i.missionID)
 
         self.sortedMissions.sort(key=lambda x: x.dropOfLocation) # Sort by Drop Location Name
 
@@ -97,7 +97,7 @@ class MissionDatabase:
     def __init__(self):
         self.mainMissions: MainMission = []
         self.cargoSCU = 0
-        self.SortedMissions = SortedMissionManager()
+        self.sortedMissions = SortedMissionManager()
 
     def AddMainMission(self, mainMission: MainMission):
         self.mainMissions.append(mainMission)
@@ -106,13 +106,13 @@ class MissionDatabase:
 
     def UpdateMissionIDs(self):
         for i in self.mainMissions:
-            i.MissionID = self.mainMissions.index(i)+1
+            i.missionID = self.mainMissions.index(i)+1
 
     def UpdateCargoSCU(self):
         self.cargoSCU = 0
         for i in self.mainMissions:
             for j in i.subMissions:
-                for k in j.DropLocations:
+                for k in j.dropLocations:
                     self.cargoSCU += k['SCU']
 
     def GetCargoSCU(self):
@@ -203,20 +203,20 @@ if bDebug: # creates test missions
 def index():
     global bShowSorted
     if bShowSorted:
-        return render_template('index2.html', sortedMissionList=missionDatabase.SortedMissions)
+        return render_template('index2.html', sortedMissionList=missionDatabase.sortedMissions)
     else:
         return render_template('index.html', missionList=missionDatabase)
 
 @app.route('/delete/<id>')
 def delete(id):
     missionDatabase.RemoveMainMission(int(id))
-    missionDatabase.SortedMissions.CheckForMissions()
+    missionDatabase.sortedMissions.CheckForMissions()
     return redirect("/")
 
 @app.route('/add/')
 def AddMission():
     ExtractMissionInfo()
-    missionDatabase.SortedMissions.CheckForMissions()
+    missionDatabase.sortedMissions.CheckForMissions()
     return redirect("/")
 
 @app.route('/toggle/')
