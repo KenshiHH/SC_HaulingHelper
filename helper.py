@@ -143,7 +143,8 @@ def ExtractMissionInfo():
         'S1DC06':'S1DCO6',
         'HUR-LS':'HUR-L5',
         'S1DCO06':'S1DCO6',
-        'HUR-L55':'HUR-L5'
+        'HUR-L55':'HUR-L5',
+        'HUR-LS5':'HUR-L5'
     }
 
     text =text.replace('© ', '') #cleanup
