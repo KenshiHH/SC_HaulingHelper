@@ -10,7 +10,7 @@ body {
 .content {
   max-width: 800px;
   width: 100%;
-  margin: 50px auto;
+  margin: 30px auto;
   padding: 20px;
   background-color: rgb(12, 13, 29);
   border-radius: 10px;
@@ -19,9 +19,11 @@ body {
 }
 
 .Mission {
+  width: 100%;
   margin: 25px auto;
   text-align: left;
-  width: 100%;
+  width: 80%;
+  outline: 10px;
 }
 
 .DropOffLocation {
@@ -42,6 +44,15 @@ body {
   font-family: "Franklin Gothic Medium", "Arial Narrow", Arial, sans-serif;
   text-align: left;
   text-indent: 30px;
+}
+
+#tab-content {
+  width: 100%;
+  margin: 20px auto;
+  padding: 20px;
+  text-align: center;
+  width: 80%;
+  outline: 30px;
 }
 
 .togglebtn {
@@ -80,4 +91,58 @@ body {
 
 .scutext {
   font-size: x-small;
+}
+
+#sortable-list {
+  width: 100%;
+  margin: 20px auto;
+  padding: 20px;
+  list-style: none;
+  padding: 0;
+}
+
+.sortable-item {
+  padding: 10px;
+  margin: 5px;
+  background: lightblue;
+  cursor: grab;
+  text-align: center;
+  border-radius: 5px;
+}
+
+#PickupItem {
+  padding-left: 125px;
+  color: red;
+  text-align: left;
+}
+
+#DeliverItem {
+  padding-left: 125px;
+  color: green;
+  text-align: left;
+}
+
+#CargoItem {
+  padding-left: 50px;
+  text-align: left;
+}
+
+#locationName {
+  font-size: 22px;
+}
+
+.Route {
+  width: 100%;
+  margin: 25px auto;
+  text-align: center;
+  width: 80%;
+  outline: 30px;
+}
+
+.MissionDropLocations {
+  width: 100%;
+  margin: 10px auto;
+  text-align: left;
+  width: 80%;
+  outline: 10px;
 }/*# sourceMappingURL=style.css.map */

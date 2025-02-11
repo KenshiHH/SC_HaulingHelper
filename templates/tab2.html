@@ -1,25 +1,16 @@
-{% extends "base.html" %}
-
-{% block head %} <title>SC Hauling Helper2</title> {% endblock head %}
-
-  {% block body %}
   <div class="content">
     <table class="Header">
-      <tr>
-      <a href="/toggle/" class="togglebtn">Toggle View<a/>
-      </tr>
       <tr>
         <h1>SC Hauling Helper </h1>
       </tr>
       <tr>
-        <form action="/add/"><input type="submit" value="Add Mission" id="btn_add"/></form>
       </tr>
       </table>
   {% if sortedMissionList.sortedMissions | length < 1 %}
   <h1>Press Button do Add Mission</h1>
   {% else %}
   {% for sortedMission in sortedMissionList.sortedMissions %}
-  <div class="Mission">
+  <div class="MissionDropLocations">
   <table>
       <tr>
         <th class="dropOffLocation">{{ sortedMission.dropOfLocation }}</th>
@@ -37,5 +28,3 @@
   {% endfor %}
   {% endif %}
   </div>
-
-{% endblock body %}

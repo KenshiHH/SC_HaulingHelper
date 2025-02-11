@@ -1,0 +1,21 @@
+{% for location in missionList.locationList %}
+<table class="Route">
+    <div>
+      <input type='hidden' name='item' value=0/>
+      <tr class="PickupLocation" sort-id={{ location["order"] }}>
+        <!-- <th id="locationName" colspan="2">{{ location }}<a href="/delete/0" class="close">X</></th>-->
+        <th id="locationName" colspan="2">{{ location["name"] }}</th>
+      </tr>
+      <tr>
+        <td id="PickupItem">Pickup</td>
+        <td id="DeliverItem">Deliver</td>
+      </tr> 
+    {% for drop in missionList.wursti(location["name"]) %}
+    <tr>
+    <td id="CargoItem">{{ drop[0] }}</td>
+    <td id="CargoItem">{{ drop[1] }}</td>
+    </tr>
+    {% endfor %}  
+    </div>
+</table>
+{% endfor %}

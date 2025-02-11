@@ -1,38 +1,23 @@
-{% extends "base.html" %}
-
-{% block head %} <title>SC Hauling Helper</title> {% endblock head %}
-
-  {% block body %}
-  <div class="content">
-    <table class="Header">
-      <tr>
-      <a href="/toggle/" class="togglebtn">Toggle View<a/>
-      </tr>
-      <tr>
-        <h1>SC Hauling Helper </h1>
-      </tr>
-      <tr>
-        <form action="/add/"><input type="submit" value="Add Mission" id="btn_add"/></form>
-      </tr>
-      </table>
-  {% if missionList.mainMissions | length < 1 %}
-  <h1>Press Button do Add Mission</h1>
-  {% else %}
-  {% for mainMissions in missionList.mainMissions %}
-  <table class="Mission">
-      {% for subMissions in mainMissions.subMissions %}
-      <tr class="PickupLocation">
-        <th>({{ mainMissions.GetID() }}) {{ subMissions.GetMissionText() }} <a href="/delete/{{ mainMissions.GetID() }}" class="close">X</></th>
-      </tr>
-      {% for dropLocations in subMissions.dropLocations %}
-      <tr class="Cargo">
-        <td>- Deliver {{ dropLocations['SCU'] }}<span class="scutext">SCU</span> to {{ dropLocations['DropLocation'] }}</td>
-      </tr>
-      {% endfor %}
-      {% endfor %}
-    </table>
-  {% endfor %}
-  {% endif %}
-</div>
-
-{% endblock body %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.5"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>SC Hauling Helper</title>
+</head>
+<body>
+    <div id="tabs" hx-get="/tab1" hx-trigger="load delay:100ms" hx-target="#tab-content" hx-swap="innerHTML"></div>
+    <div class="tab-list" role="tablist">
+        <button hx-get="/tab1" class="selected" role="tab" aria-selected="true" aria-controls="tab-content" hx-target="#tab-content">Missions</button>
+        <button hx-get="/tab2" role="tab" aria-selected="false" aria-controls="tab-content" hx-target="#tab-content">Drop Locations</button>
+        <button hx-get="/tab3" role="tab" aria-selected="false" aria-controls="tab-content" hx-target="#tab-content">Route Planer</button>
+    </div>
+    <div id="tab-content" role="tabpanel" class="tab-content">
+        <div class="htmx-indicator">Loading...</div>
+    </div>
+</body>
+</html>
