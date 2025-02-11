@@ -2,9 +2,8 @@ from PIL import ImageGrab
 import pytesseract
 import tkinter as tk
 from flask import Flask
-from flask import render_template, request, jsonify
+from flask import render_template, request
 from flask import redirect
-import time
 import uuid
 
 
@@ -28,6 +27,8 @@ class LocationDatabase:
             self.itemName = ""
             self.SCUs = 0
             self.missionUUID = 0
+            self.pickedUp = False
+            self.droppedOff = False
     class DropLocation:
         def __init__(self):
             self.name = ""
@@ -329,7 +330,8 @@ def ExtractMissionInfo():
         'HUR-LS':'HUR-L5',
         'S1DCO06':'S1DCO6',
         'HUR-L55':'HUR-L5',
-        'HUR-LS5':'HUR-L5'
+        'HUR-LS5':'HUR-L5',
+        'HDMS-Periman':'HDMS-Perlman'
     }
 
     text =text.replace('© ', '') #cleanup
