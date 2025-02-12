@@ -61,18 +61,14 @@ class LocationDatabase:
 
 
     def AddDropLocation(self, Drop :str, Cargo: Cargo):
-        print(Drop)
-        print("running add drop location")
         bDropLocationFound = False
 
         for i in self.dropLocations:
             if Drop == i.name:
                 bDropLocationFound = True
-                print("drop location found")
                 i.cargo.append(Cargo)
 
         if not bDropLocationFound:
-            print("drop location not found")
             newDropLocation = self.DropLocation()
             newDropLocation.name = Drop
             newDropLocation.cargo.append(Cargo)
@@ -135,7 +131,6 @@ class LocationDatabase:
                 locationDatabase.AddPickupLocation(j.pickupLocation, pickupCargo)
                 self.GenerateLocationList(j.pickupLocation)
                 for k in j.dropLocations:
-                    print("add to drop location")
                     cargo = LocationDatabase.Cargo()
                     cargo.itemName = j.item
                     cargo.SCUs = k['SCU']
