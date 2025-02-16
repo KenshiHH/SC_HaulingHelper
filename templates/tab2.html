@@ -10,12 +10,9 @@
   {% else %}
   {% for sortedMission in missionDatabase.sortedMissionManager.sortedMissions %}
   <div class="MissionDropLocations">
-  <table>
+  <table class="Mission">
       <tr>
         <th class="dropOffLocation">{{ sortedMission.dropOfLocation }}</th>
-        <th></th>
-        <th></th>
-        <th></th>
       </tr>
       {% for cargo in sortedMission.cargo %}
       <tr class="Cargo">

@@ -134,7 +134,6 @@ body {
 
 #locationName {
   font-size: 22px;
-  width: 60%;
   text-align: center;
   padding-bottom: 8px;
   padding-top: 25px;
@@ -205,6 +204,7 @@ body {
 }
 
 #CargoTable {
+  padding-top: 25px;
   width: 80%;
   margin: 0 auto;
 }/*# sourceMappingURL=style.css.map */

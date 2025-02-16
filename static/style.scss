@@ -120,7 +120,6 @@ body {
 }
 #locationName{
   font-size: 22px;
-  width: 60%;
   text-align: center;
   padding-bottom: 8px;
   padding-top: 25px;
@@ -181,6 +180,7 @@ body {
     background-color: #353535;
 }
 #CargoTable {
+  padding-top: 25px;
   width: 80%;
   margin: 0 auto;
 }
