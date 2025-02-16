@@ -8,7 +8,7 @@ import ctypes
 
 
 ####config
-bDebug = True
+bDebug = False
 
 #get screen resolution
 user32 = ctypes.windll.user32
