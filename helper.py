@@ -8,7 +8,7 @@ import ctypes
 
 
 ####config
-bDebug = False
+bDebug = True
 
 #get screen resolution
 user32 = ctypes.windll.user32
@@ -444,15 +444,6 @@ def update_order():
         print("Neue Sortierung:", new_order)
     missionDatabase.locationDatabase.ReorderLocationList(new_order)
     return render_template('route.html', missionDatabase=missionDatabase)
-
-@app.route('/update-stations-order', methods=['POST'])
-def update_stations_order():
-    new_order = request.json.get('order', [])
-    if bDebug:
-        print("Neue Sortierung:", new_order)
-    missionDatabase.newMissionOrder(new_order)
-    missionDatabase.locationDatabase.GenerateDropPickupList(missionDatabase)
-    return render_template('stations.html', missionDatabase=missionDatabase)
 
 @app.route('/route', methods=['GET'])
 def route():

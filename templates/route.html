@@ -1,12 +1,6 @@
 {% for location in missionDatabase.locationDatabase.locationList %}
 <table class="Route">
     <div>
-      {% if location["order"] == 1 %}
-      <tr>
-        <td id="PickupItem" colspan="2">Pickup</td>
-        <td id="DeliverItem" colspan="2">Deliver</td>
-      </tr> 
-    {% endif %}
       <input type='hidden' name='item' value=0/>
       <tr class="PickupLocation" sort-id={{ location["order"] }}>
         <th id="locationName" colspan="4">{{ location["name"] }}</th>

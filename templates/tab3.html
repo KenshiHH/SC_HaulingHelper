@@ -8,6 +8,12 @@
   {% if missionDatabase.mainMissions | length < 1 %}
   <h1>No Missions</h1>
   {% else %}
+  <table id="CargoTable">
+  <tr>
+    <td id="PickupItem">Pickup</td>
+    <td id="DeliverItem">Deliver</td>
+  </tr> 
+</table>
   <div hx-get="/route" hx-target="#sortable-list" hx-trigger="load">
     <form id="sortable-list" hx-post="/update-order" hx-trigger="end">
       <div class="htmx-indicator">Updating...</div>
