@@ -10,7 +10,7 @@ body {
 .content {
   max-width: 800px;
   width: 100%;
-  margin: 50px auto;
+  margin: 30px auto;
   padding: 20px;
   background-color: rgb(12, 13, 29);
   border-radius: 10px;
@@ -19,9 +19,11 @@ body {
 }
 
 .Mission {
+  width: 100%;
   margin: 25px auto;
   text-align: left;
-  width: 100%;
+  width: 80%;
+  outline: 10px;
 }
 
 .DropOffLocation {
@@ -44,6 +46,15 @@ body {
   text-indent: 30px;
 }
 
+#tab-content {
+  width: 100%;
+  margin: 20px auto;
+  padding: 20px;
+  text-align: center;
+  width: 80%;
+  outline: 30px;
+}
+
 .togglebtn {
   text-align: left;
   color: #006405;
@@ -57,6 +68,7 @@ body {
   height: 32px;
   opacity: 0.5;
   color: #ff0000;
+  cursor: pointer;
 }
 
 .close:hover {
@@ -80,4 +92,117 @@ body {
 
 .scutext {
   font-size: x-small;
+}
+
+#sortable-list {
+  width: 100%;
+  margin: 20px auto;
+  padding: 20px;
+  list-style: none;
+  padding: 0;
+}
+
+.sortable-item {
+  padding: 10px;
+  margin: 5px;
+  background: lightblue;
+  cursor: grab;
+  text-align: center;
+  border-radius: 5px;
+}
+
+#PickupItem {
+  padding-left: 125px;
+  color: yellow;
+  text-align: left;
+}
+
+#DeliverItem {
+  padding-left: 125px;
+  color: green;
+  text-align: left;
+}
+
+#CargoItem {
+  width: 30%;
+  text-align: left;
+}
+
+#CargoItemSCU {
+  width: 20%;
+  text-align: right;
+  padding-right: 8px;
+}
+
+#locationName {
+  font-size: 22px;
+  width: 100%;
+  text-align: center;
+  padding-bottom: 10px;
+}
+
+.Route {
+  width: 100%;
+  margin: 25px;
+  text-align: center;
+  width: 80%;
+  outline: 30px;
+}
+
+.MissionDropLocations {
+  width: 100%;
+  margin: 10px;
+  text-align: left;
+  width: 80%;
+  outline: 10px;
+}
+
+#reward {
+  text-align: left;
+}
+
+#rewards {
+  width: 100%;
+}
+
+#reward_uec {
+  text-align: right;
+}
+
+#reward_scu {
+  text-align: left;
+}
+
+.add-Mission-button {
+  background-color: royalblue;
+  border: none;
+  color: white;
+  padding: 15px 32px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+  margin: 4px 2px;
+  cursor: pointer;
+  border-radius: 12px;
+}
+
+.add-Mission-button:hover {
+  background-color: rgb(118, 142, 212);
+}
+
+#tab-Button {
+  background-color: #616161;
+  border: 1px solid #444;
+  color: white;
+  padding: 10px 20px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+#tab-Button:hover {
+  background-color: #555;
 }/*# sourceMappingURL=style.css.map */
