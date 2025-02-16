@@ -1,18 +1,17 @@
 <div class="content">
-  <table class="Header">
+  <table class="Rewards" id="rewards">
     <tr>
-      <h1>SC Hauling Helper </h1>
+      <td id="reward_scu">SCU: {{ missionDatabase.GetCargoSCU() }}</td>
+      <td id="reward_uec">aUEC: {{ missionDatabase.GetAuec() }}</td>
     </tr>
-    <tr>
-    </tr>
-    </table>
-  {% if missionList.mainMissions | length < 1 %}
-  <h1>Press Button to Add Mission</h1>
+  </table>
+  {% if missionDatabase.mainMissions | length < 1 %}
+  <h1>No Missions</h1>
   {% else %}
-  <div hx-get="/route" hx-target="#sortable-list" hx-trigger="load delay:100ms">
+  <div hx-get="/route" hx-target="#sortable-list" hx-trigger="load">
     <form id="sortable-list" hx-post="/update-order" hx-trigger="end">
       <div class="htmx-indicator">Updating...</div>
-      <!-- loading mission.html -->
+      <!-- loading route.html -->
     </form>
     <script>
       function initializeSortable() {

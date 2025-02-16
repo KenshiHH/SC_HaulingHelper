@@ -1,19 +1,24 @@
-{% for location in missionList.locationList %}
+{% for location in missionDatabase.locationDatabase.locationList %}
 <table class="Route">
     <div>
+      {% if location["order"] == 1 %}
+      <tr>
+        <td id="PickupItem" colspan="2">Pickup</td>
+        <td id="DeliverItem" colspan="2">Deliver</td>
+      </tr> 
+    {% endif %}
       <input type='hidden' name='item' value=0/>
       <tr class="PickupLocation" sort-id={{ location["order"] }}>
-        <!-- <th id="locationName" colspan="2">{{ location }}<a href="/delete/0" class="close">X</></th>-->
-        <th id="locationName" colspan="2">{{ location["name"] }}</th>
+        <th id="locationName" colspan="4">{{ location["name"] }}</th>
       </tr>
-      <tr>
-        <td id="PickupItem">Pickup</td>
-        <td id="DeliverItem">Deliver</td>
-      </tr> 
-    {% for drop in missionList.wursti(location["name"]) %}
+    {% for drop in missionDatabase.locationDatabase.GetCargoTab3(location["name"]) %}
     <tr>
-    <td id="CargoItem">{{ drop[0] }}</td>
+    <td id="CargoItemSCU">{{ drop[0] }}</td>
     <td id="CargoItem">{{ drop[1] }}</td>
+    <td id="CargoItemSCU">{{ drop[2] }}</td>
+    <td id="CargoItem">{{ drop[3] }}</td>
+    <!-- to do toggle pickedup/deliverd -->
+    <!-- <td id="CargoItem" {% if bDone %}style="text-decoration: line-through;"{% endif %}>{{ drop[1] }}</td> -->
     </tr>
     {% endfor %}  
     </div>

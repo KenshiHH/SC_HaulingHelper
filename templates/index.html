@@ -3,18 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
     <script src="https://unpkg.com/htmx.org@1.9.5"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <title>SC Hauling Helper</title>
 </head>
 <body>
-    <div id="tabs" hx-get="/tab1" hx-trigger="load delay:100ms" hx-target="#tab-content" hx-swap="innerHTML"></div>
+    <div id="tabs" hx-get="/tab1" hx-trigger="load" hx-target="#tab-content" hx-swap="innerHTML"></div>
     <div class="tab-list" role="tablist">
-        <button hx-get="/tab1" class="selected" role="tab" aria-selected="true" aria-controls="tab-content" hx-target="#tab-content">Missions</button>
-        <button hx-get="/tab2" role="tab" aria-selected="false" aria-controls="tab-content" hx-target="#tab-content">Drop Locations</button>
-        <button hx-get="/tab3" role="tab" aria-selected="false" aria-controls="tab-content" hx-target="#tab-content">Route Planer</button>
+        <button id="tab-Button" hx-get="/tab1" role="tab" aria-selected="false" aria-controls="tab-content" hx-target="#tab-content">Missions</button>
+        <button id="tab-Button" hx-get="/tab2" role="tab" aria-selected="false" aria-controls="tab-content" hx-target="#tab-content">Drop Locations</button>
+        <button id="tab-Button" hx-get="/tab3" role="tab" aria-selected="false" aria-controls="tab-content" hx-target="#tab-content">Route Planer</button>
     </div>
     <div id="tab-content" role="tabpanel" class="tab-content">
         <div class="htmx-indicator">Loading...</div>

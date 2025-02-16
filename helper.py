@@ -1,23 +1,20 @@
 from PIL import ImageGrab
 import pytesseract
-import tkinter as tk
 from flask import Flask
 from flask import render_template, request
 from flask import redirect
 import uuid
+import ctypes
 
 
 ####config
 bDebug = False
 
-root = tk.Tk()
+#get screen resolution
+user32 = ctypes.windll.user32
+screen_width = user32.GetSystemMetrics(0)
+screen_height = user32.GetSystemMetrics(1)
 
-screen_width = root.winfo_screenwidth()
-screen_height = root.winfo_screenheight()
-
-root.destroy() # destroys initial window
-
-bShowSorted = False
 
 app = Flask(__name__)
 
@@ -42,8 +39,6 @@ class LocationDatabase:
         self.dropLocations = []
         self.pickupLocations = []
         self.locationList = []
-        
-
 
     def AddPickupLocation(self, PickupLocation:str, Cargo: Cargo):
         bPickupLocationFound = False
@@ -58,7 +53,6 @@ class LocationDatabase:
             newPickupLocation.name = PickupLocation
             newPickupLocation.cargo.append(Cargo)
             self.pickupLocations.append(newPickupLocation)
-
 
     def AddDropLocation(self, Drop :str, Cargo: Cargo):
         bDropLocationFound = False
@@ -80,21 +74,6 @@ class LocationDatabase:
     def GetDropLocations(self):
         return self.dropLocations
     
-    # Debugging
-    def PrintPickupLocations(self):
-        for i in self.pickupLocations:
-            print(f"{i.name}")
-            for j in i.cargo:
-                print(j.itemName, j.SCUs, j.missionUUID)
-            print("#################")
-
-    def PrintDropLocations(self):
-        for i in self.dropLocations:
-            print(i.name)
-            for j in i.cargo:
-                print(j.itemName, j.SCUs, j.missionUUID)
-            print("-----------------")
-
     def GenerateLocationList(self,location: str):
         bfound = False
         locationDetail = {}
@@ -117,7 +96,7 @@ class LocationDatabase:
 
     def GenerateDropPickupList(self, missionDatabase, bGenerate:bool = False):
         if not bGenerate:
-            if locationDatabase.locationList:
+            if missionDatabase.locationDatabase.locationList:
                 return
         self.locationList.clear()
         self.pickupLocations.clear()
@@ -128,14 +107,14 @@ class LocationDatabase:
                 pickupCargo.itemName = j.item
                 pickupCargo.SCUs = j.scu
                 pickupCargo.missionUUID = i.uuid
-                locationDatabase.AddPickupLocation(j.pickupLocation, pickupCargo)
+                missionDatabase.locationDatabase.AddPickupLocation(j.pickupLocation, pickupCargo)
                 self.GenerateLocationList(j.pickupLocation)
                 for k in j.dropLocations:
                     cargo = LocationDatabase.Cargo()
                     cargo.itemName = j.item
                     cargo.SCUs = k['SCU']
                     cargo.missionUUID = i.uuid
-                    locationDatabase.AddDropLocation(k['DropLocation'], cargo)
+                    missionDatabase.locationDatabase.AddDropLocation(k['DropLocation'], cargo)
                     self.GenerateLocationList(k['DropLocation'])
 
     def GetPickupList(self,location:str):
@@ -148,11 +127,10 @@ class LocationDatabase:
             if i.name == location:
                 return i.cargo
 
-        
-    def wursti(self,location:str):
+    def GetCargoTab3(self,location:str):
         pickupCargo = self.GetPickupList(location)
         dropCargo = self.GetDropList(location)
-        template = ["",""]
+        template = ["","","",""]
         listenarray :list = []
 
         pickupCargoLength = len(pickupCargo) if pickupCargo else 0
@@ -162,23 +140,26 @@ class LocationDatabase:
         for i in range(maxLength):
             try:
                 if i < pickupCargoLength:
-                    template[0] = f"{pickupCargo[i].SCUs}x {pickupCargo[i].itemName}"  
+                    template[0] = f"{pickupCargo[i].SCUs}x" 
+                    template[1] = f"{pickupCargo[i].itemName}" 
                 else:
                     template[0] = ""
+                    template[1] = ""
             except:
                 ...
             try:
                 if i < dropCargoLength:
-                    template[1] = f"{dropCargo[i].SCUs}x {dropCargo[i].itemName}"  
+                    template[2] = f"{dropCargo[i].SCUs}x"  
+                    template[3] = f"{dropCargo[i].itemName}"
                 else:
-                    template[1] = ""
+                    template[2] = ""
+                    template[3] = ""
             except:
                 ...
             listenarray.append(template)
-            template = ["",""]
+            template = ["","","",""]
             
         return listenarray
-        
 
 
 class SortedMission:
@@ -247,6 +228,7 @@ class MainMission:
         self.subMissions: SubMission = []
         self.missionID = 0
         self.sortedID = 0
+        self.auec = 0
         self.uuid = uuid.uuid4()
 
     def AddSubMission(self, subMission: SubMission):
@@ -260,14 +242,17 @@ class MissionDatabase:
     def __init__(self):
         self.mainMissions: MainMission = []
         self.cargoSCU = 0
-        self.sortedMissions = SortedMissionManager()
+        self.sortedMissionManager = SortedMissionManager()
         self.dropOffLocations = {}
         self.pickupLocations = {}
+        self.auec = 0
+        self.locationDatabase = LocationDatabase()
 
     def AddMainMission(self, mainMission: MainMission):
         self.mainMissions.append(mainMission)
         self.UpdateMissionIDs()
         self.UpdateCargoSCU()
+        self.UpdateAUEC()
 
     def UpdateMissionIDs(self):
         for i in self.mainMissions:
@@ -279,6 +264,16 @@ class MissionDatabase:
             for j in i.subMissions:
                 for k in j.dropLocations:
                     self.cargoSCU += k['SCU']
+
+    def UpdateAUEC(self):
+        self.auec = 0
+        for i in self.mainMissions:
+            self.auec += i.auec
+
+    def GetAuec(self):
+        auec = self.auec
+        auec = "{:,}".format(auec).replace(",", ".")
+        return auec
 
     def GetCargoSCU(self):
         return self.cargoSCU
@@ -299,7 +294,6 @@ class MissionDatabase:
         self.mainMissions.clear()
         self.mainMissions = newOrder 
         self.UpdateMissionIDs()
-        print("database updated")
 
     def GeneratePickupLocations(self):
         self.pickupLocations.clear()
@@ -309,24 +303,41 @@ class MissionDatabase:
 
 
 missionDatabase = MissionDatabase()
-locationDatabase = LocationDatabase()
+
+def ExtractReward():
+    reward = 0
+    auec_coords = (screen_width*0.66, screen_height*0.1, screen_width*0.95, screen_height*0.26)
+    screenshot_auec = ImageGrab.grab(auec_coords)
+    text = pytesseract.image_to_string(screenshot_auec,config='--psm 6 --oem 1')
+    text = text.split('\n')
+    try:
+        for i in text:
+            if "reward" in i.lower():
+                rew = i
+                rew = rew[9:]
+                rew = rew.replace(" ", "").replace(",", "")
+                reward = int(rew)
+    except:
+        reward = 0
+    return reward
 
 def ExtractMissionInfo():
     global missionDatabase
 
-    bbox = (screen_width*0.62, screen_height*0.25, screen_width*0.9, screen_height*0.70)
-    screenshot = ImageGrab.grab(bbox)
+    mission_coords = (screen_width*0.62, screen_height*0.25, screen_width*0.9, screen_height*0.70)
+    screenshot = ImageGrab.grab(mission_coords)
 
     text = pytesseract.image_to_string(screenshot,config='--psm 6 --oem 1')
 
     stringFixes = {
         '$':"S",
-        'S1DC06':'S1DCO6',
+        'Teasa Spaceport':'Teasa Spaceport (Lorville)',
         'HUR-LS':'HUR-L5',
-        'S1DCO06':'S1DCO6',
+        'S1DCO06':'S1DC06',
         'HUR-L55':'HUR-L5',
         'HUR-LS5':'HUR-L5',
-        'HDMS-Periman':'HDMS-Perlman'
+        'HDMS-Periman':'HDMS-Perlman',
+        'S1DCO6':'S1DC06'
     }
 
     text =text.replace('© ', '') #cleanup
@@ -353,6 +364,8 @@ def ExtractMissionInfo():
                     cargo = cargo.split("from ")[0]
                     cargo = cargo.replace(' ',"")
                     pickup = i.split("from ")[1]
+                    for k in stringFixes:
+                        pickup = pickup.replace(k,stringFixes[k])
                     newSubMission.AddPickupInfo(cargo, pickup)
                     bFoundPickup = True
 
@@ -367,12 +380,12 @@ def ExtractMissionInfo():
 
             newMission.AddSubMission(newSubMission)
         if bFoundPickup:
+            newMission.auec = ExtractReward()
             missionDatabase.AddMainMission(newMission)
-            
-    
 
     except Exception as error:
         print("An exception occurred:", error)
+
 
 
 if bDebug: # creates test missions
@@ -397,8 +410,8 @@ if bDebug: # creates test missions
     newMission = MainMission()
     newSubMission = SubMission()
     newSubMission.AddPickupInfo("Copper", "Pyro")
-    newSubMission.AddDropLocation("Copper", 1, "Veddel")
-    newSubMission.AddDropLocation("Copper", 12, "Leningrad")
+    newSubMission.AddDropLocation("Copper", 1, "Mars")
+    newSubMission.AddDropLocation("Copper", 12, "Jupiter")
     newSubMission.AddDropLocation("Copper", 12, "Pyro")
     newMission.AddSubMission(newSubMission)
     newMission.missionID = 3
@@ -407,67 +420,63 @@ if bDebug: # creates test missions
 
 @app.route('/')
 def index():
-    return render_template('index.html', missionList=missionDatabase)
+    return render_template('index.html', missionDatabase=missionDatabase)
 
 @app.route('/delete/<id>', methods=['POST'])
 def delete(id):
     missionDatabase.RemoveMainMission(int(id))
-    missionDatabase.sortedMissions.CheckForMissions()
-    return render_template('mission.html', missionList=missionDatabase)
+    missionDatabase.sortedMissionManager.CheckForMissions()
+    missionDatabase.locationDatabase.GenerateDropPickupList(missionDatabase,True)
+    return render_template('tab1.html', missionDatabase=missionDatabase)
 
 @app.route('/add/', methods=['POST'])
 def AddMission():
     ExtractMissionInfo()
-    missionDatabase.sortedMissions.CheckForMissions()
-    locationDatabase.GenerateDropPickupList(missionDatabase,True)
+    missionDatabase.sortedMissionManager.CheckForMissions()
+    missionDatabase.locationDatabase.GenerateDropPickupList(missionDatabase,True)
     return redirect("/")
 
-@app.route('/toggle/')
-def ToggleView():
-    global bShowSorted
-    bShowSorted = not bShowSorted
-    return redirect("/")
 
 @app.route('/update-order', methods=['POST'])
 def update_order():
     new_order = request.json.get('order', [])
     if bDebug:
-        print("Neue Sortierung:", new_order)  # Debug-Ausgabe
-    locationDatabase.ReorderLocationList(new_order)
-    return render_template('route.html', missionList=locationDatabase)
+        print("Neue Sortierung:", new_order)
+    missionDatabase.locationDatabase.ReorderLocationList(new_order)
+    return render_template('route.html', missionDatabase=missionDatabase)
 
 @app.route('/update-stations-order', methods=['POST'])
 def update_stations_order():
     new_order = request.json.get('order', [])
     if bDebug:
-        print("Neue Sortierung:", new_order)  # Debug-Ausgabe
+        print("Neue Sortierung:", new_order)
     missionDatabase.newMissionOrder(new_order)
-    locationDatabase.GenerateDropPickupList(missionDatabase)
-    return render_template('stations.html', missionList=locationDatabase)
+    missionDatabase.locationDatabase.GenerateDropPickupList(missionDatabase)
+    return render_template('stations.html', missionDatabase=missionDatabase)
 
 @app.route('/route', methods=['GET'])
 def route():
-    locationDatabase.GenerateDropPickupList(missionDatabase)
-    return render_template('route.html', missionList=locationDatabase)
+    missionDatabase.locationDatabase.GenerateDropPickupList(missionDatabase)
+    return render_template('route.html', missionDatabase=missionDatabase)
 
 @app.route('/stations', methods=['POST'])
 def stations():
-    locationDatabase.GenerateDropPickupList(missionDatabase)
-    return render_template('stations.html', missionList=locationDatabase)
+    missionDatabase.locationDatabase.GenerateDropPickupList(missionDatabase)
+    return render_template('stations.html', missionDatabase=missionDatabase)
 
 @app.route('/tab1', methods=['GET'])
 def tab1():
-    return render_template('tab1.html', missionList=missionDatabase)
+    return render_template('tab1.html', missionDatabase=missionDatabase)
 
 @app.route('/tab2', methods=['GET'])
 def tab2():
-    missionDatabase.sortedMissions.CheckForMissions()
-    return render_template('tab2.html', sortedMissionList=missionDatabase.sortedMissions)
+    missionDatabase.sortedMissionManager.CheckForMissions()
+    return render_template('tab2.html', missionDatabase=missionDatabase)
 
 @app.route('/tab3', methods=['GET'])
 def tab3():
-    locationDatabase.GenerateDropPickupList(missionDatabase)
-    return render_template('tab3.html', missionList=missionDatabase)
+    missionDatabase.locationDatabase.GenerateDropPickupList(missionDatabase)
+    return render_template('tab3.html', missionDatabase=missionDatabase)
 
 
 

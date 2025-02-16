@@ -1,20 +1,19 @@
 <div id="content" class="content">
+  <table class="Rewards" id="rewards">
+  <tr>
+    <td id="reward_scu">SCU: {{ missionDatabase.GetCargoSCU() }}</td>
+    <td id="reward_uec">aUEC: {{ missionDatabase.GetAuec() }}</td>
+  </tr>
+  </table>
   <table class="Header">
     <tr>
-      <h1>SC Hauling Helper </h1>
-    </tr>
-    <tr>
-      <button hx-post="/add" hx-trigger="click">Add Mission</button>
-      <div class="htmx-indicator">Updating...</div>
-    </tr>
-    <tr id="scu_amount">
-      <td>SCU: {{ missionList.GetCargoSCU() }}</td>
+      <button class="add-Mission-button" hx-post="/add" hx-trigger="click">Add Mission</button>
     </tr>
     </table>
-{% if missionList.mainMissions | length < 1 %}
-<h1>Press Button to Add Mission</h1>
+{% if missionDatabase.mainMissions | length < 1 %}
+<h1>No Missions</h1>
 {% else %}
-{% for mainMissions in missionList.mainMissions %}
+{% for mainMissions in missionDatabase.mainMissions %}
 <table class="Mission">
     {% for subMissions in mainMissions.subMissions %}
     <tr class="PickupLocation">
