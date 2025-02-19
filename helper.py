@@ -337,7 +337,10 @@ def ExtractMissionInfo():
         'HUR-L55':'HUR-L5',
         'HUR-LS5':'HUR-L5',
         'HDMS-Periman':'HDMS-Perlman',
-        'S1DCO6':'S1DC06'
+        'S1DCO6':'S1DC06',
+        'NT Int': 'NB Int. Spaceport (New Babbage)',
+        'S4LDO1':'S4LD01',
+        'SMCa':'SMCA'
     }
 
     text =text.replace('© ', '') #cleanup

@@ -136,8 +136,9 @@ body {
   font-size: 22px;
   text-align: center;
   padding-bottom: 8px;
-  padding-top: 25px;
+  padding-top: 8px;
   margin: 0 auto;
+  background-color: rgb(21, 24, 51);
 }
 
 .Route {
