@@ -285,6 +285,7 @@ class MissionDatabase:
             print("error deleting Mission"+str(int))
         self.UpdateMissionIDs()
         self.UpdateCargoSCU()
+        self.UpdateAUEC()
 
     def newMissionOrder(self,new_order):
         newOrder: MainMission = []
