@@ -102,13 +102,20 @@ body {
   padding: 0;
 }
 
+#sortable-list:active {
+  cursor: grabbing;
+}
+
 .sortable-item {
   padding: 10px;
   margin: 5px;
   background: lightblue;
-  cursor: grab;
   text-align: center;
   border-radius: 5px;
+}
+
+.sortable-item:active {
+  cursor: grabbing !important;
 }
 
 #PickupItem {
@@ -135,10 +142,15 @@ body {
 #locationName {
   font-size: 22px;
   text-align: center;
-  padding-bottom: 8px;
-  padding-top: 8px;
+  padding-bottom: 0px;
+  padding-top: 0px;
   margin: 0 auto;
   background-color: rgb(21, 24, 51);
+  cursor: grab;
+}
+
+#locationName:active {
+  cursor: grabbing !important;
 }
 
 .Route {

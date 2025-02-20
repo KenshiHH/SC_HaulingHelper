@@ -8,7 +8,7 @@ import ctypes
 
 
 ####config
-bDebug = False
+bDebug = True
 
 #get screen resolution
 user32 = ctypes.windll.user32
@@ -79,6 +79,8 @@ class LocationDatabase:
         locationDetail = {}
         locationDetail["name"] = location
         locationDetail["order"] = len(self.locationList)+1
+        locationDetail["done"] = False
+
 
         for i in self.locationList:
             if i["name"] == location:
@@ -160,6 +162,11 @@ class LocationDatabase:
             template = ["","","",""]
             
         return listenarray
+    
+    def ToggleLocationStatus(self,location: str):
+        for i in self.locationList:
+            if i["name"] == location:
+                i["done"] = not i["done"]
 
 
 class SortedMission:
@@ -440,6 +447,11 @@ def AddMission():
     missionDatabase.locationDatabase.GenerateDropPickupList(missionDatabase,True)
     return redirect("/")
 
+@app.route('/toggle/<location>', methods=['POST'])
+def ToggleLocation(location):
+    missionDatabase.locationDatabase.ToggleLocationStatus(location)
+    missionDatabase.locationDatabase.GenerateDropPickupList(missionDatabase)
+    return render_template('route.html', missionDatabase=missionDatabase)
 
 @app.route('/update-order', methods=['POST'])
 def update_order():
