@@ -8,7 +8,7 @@ import ctypes
 
 
 ####config
-bDebug = True
+bDebug = False
 
 #get screen resolution
 user32 = ctypes.windll.user32
@@ -348,7 +348,8 @@ def ExtractMissionInfo():
         'S1DCO6':'S1DC06',
         'NT Int': 'NB Int. Spaceport (New Babbage)',
         'S4LDO1':'S4LD01',
-        'SMCa':'SMCA'
+        'SMCa':'SMCA',
+        'Depot SS4LD':'Depot S4LD'
     }
 
     text =text.replace('© ', '') #cleanup
