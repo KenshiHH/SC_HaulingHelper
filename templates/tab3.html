@@ -1,4 +1,28 @@
 <div class="content">
+  <script>
+    htmx.onLoad(function(content) {
+      var sortables = content.querySelectorAll("#sortable-list");
+      for (var i = 0; i < sortables.length; i++) {
+        var sortable = sortables[i];
+        var sortableInstance = new Sortable(sortable, {
+            animation: 150,
+            ghostClass: 'blue-background-class',
+            onEnd: function (evt) {
+              let order = Array.from(document.querySelectorAll('.PickupLocation'))
+                                  .map(item => item.getAttribute('sort-id'));
+                  fetch('/update-order', {
+                      method: 'POST',
+                      headers: {
+                          'Content-Type': 'application/json'
+                      },
+                      body: JSON.stringify({ order: order })
+                  })
+                  .then(response => response.text());
+            }
+        });
+      }
+  })
+  </script>
   <table class="Rewards" id="rewards">
     <tr>
       <td id="reward_scu">SCU: {{ missionDatabase.GetCargoSCU() }}</td>
@@ -14,38 +38,11 @@
     <td id="DeliverItem">Deliver</td>
   </tr> 
 </table>
-  <div hx-get="/route" hx-target="#sortable-list" hx-trigger="load">
+  <div hx-get="/route" hx-target="#sortable-list" hx-trigger="end delay:100ms,load">
     <form id="sortable-list" hx-trigger="end">
       <div class="htmx-indicator">Updating...</div>
       <!-- loading route.html -->
     </form>
-    <script>
-      function initializeSortable() {
-          let sortable = new Sortable(document.getElementById('sortable-list'), {
-              animation: 150,
-              ghostClass: 'blue-background-class',
-              onEnd: function () {
-                  let order = Array.from(document.querySelectorAll('.PickupLocation'))
-                                  .map(item => item.getAttribute('sort-id'));
-                  fetch('/update-order', {
-                      method: 'POST',
-                      headers: {
-                          'Content-Type': 'application/json'
-                      },
-                      body: JSON.stringify({ order: order })
-                  })
-                  .then(response => response.text())
-                  .then(html => {
-                      document.getElementById("sortable-list").innerHTML = html;
-                  })
-                  .catch(error => console.error('Error:', error));
-              }
-          });
-      }
-  
-      document.addEventListener('DOMContentLoaded', initializeSortable);
-      document.addEventListener('htmx:afterSwap', initializeSortable);
-    </script>
   </div>
   {% endif %}
-  </div>
+</div>
