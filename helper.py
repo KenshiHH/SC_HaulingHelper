@@ -326,12 +326,13 @@ def ExtractReward():
     text = pytesseract.image_to_string(screenshot_auec,config='--psm 6 --oem 3' )
     print(text)
     text = text.split('\n')
+    
+
     try:
         for i in text:
             if "reward" in i.lower():
-                rew = i
-                rew = rew[9:]
-                rew = rew.replace(" ", "").replace(",", "")
+                rew = i.rsplit(' ', 1)[-1]
+                rew = rew.replace(",", "")
                 reward = int(rew)
     except:
         print("reward not found")
