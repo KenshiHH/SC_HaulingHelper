@@ -243,6 +243,9 @@ class MainMission:
 
     def GetID(self):
         return str(self.missionID)
+    
+    def GetUEC(self):
+        return self.auec
 
 
 class MissionDatabase:
@@ -285,6 +288,10 @@ class MissionDatabase:
     def GetCargoSCU(self):
         return self.cargoSCU
 
+    def EditMissionReward(self,missionID:int,reward:int):
+        self.mainMissions[int(missionID)-1].auec = reward
+        self.UpdateAUEC()
+
     def RemoveMainMission(self,int):
         try:
             del self.mainMissions[int-1]
@@ -316,7 +323,8 @@ def ExtractReward():
     reward = 0
     auec_coords = (screen_width*0.66, screen_height*0.1, screen_width*0.95, screen_height*0.26)
     screenshot_auec = ImageGrab.grab(auec_coords)
-    text = pytesseract.image_to_string(screenshot_auec,config='--psm 6 --oem 1')
+    text = pytesseract.image_to_string(screenshot_auec,config='--psm 6 --oem 3' )
+    print(text)
     text = text.split('\n')
     try:
         for i in text:
@@ -326,7 +334,9 @@ def ExtractReward():
                 rew = rew.replace(" ", "").replace(",", "")
                 reward = int(rew)
     except:
-        reward = 0
+        print("reward not found")
+        pass
+
     return reward
 
 def ExtractMissionInfo():
@@ -335,7 +345,7 @@ def ExtractMissionInfo():
     mission_coords = (screen_width*0.62, screen_height*0.25, screen_width*0.9, screen_height*0.70)
     screenshot = ImageGrab.grab(mission_coords)
 
-    text = pytesseract.image_to_string(screenshot,config='--psm 6 --oem 1')
+    text = pytesseract.image_to_string(screenshot,config='--psm 6 --oem 3')
 
     stringFixes = {
         '$':"S",
@@ -346,7 +356,7 @@ def ExtractMissionInfo():
         'HUR-LS5':'HUR-L5',
         'HDMS-Periman':'HDMS-Perlman',
         'S1DCO6':'S1DC06',
-        'NT Int': 'NB Int. Spaceport (New Babbage)',
+        'NB Int': 'NB Int. Spaceport (New Babbage)',
         'S4LDO1':'S4LD01',
         'SMCa':'SMCA',
         'Depot SS4LD':'Depot S4LD'
@@ -434,7 +444,13 @@ if bDebug: # creates test missions
 def index():
     return render_template('index.html', missionDatabase=missionDatabase)
 
-@app.route('/delete/<id>', methods=['POST'])
+@app.route('/edit/<id>/<auec>', methods=['PUT'])
+def editReward(id,auec):
+    print("editreward",id,auec)
+    missionDatabase.EditMissionReward(int(id),int(auec))
+    return render_template('tab1.html', missionDatabase=missionDatabase)
+
+@app.route('/delete/<id>', methods=['DELETE'])
 def delete(id):
     missionDatabase.RemoveMainMission(int(id))
     missionDatabase.sortedMissionManager.CheckForMissions()

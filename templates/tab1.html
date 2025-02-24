@@ -17,7 +17,7 @@
 <table class="Mission">
     {% for subMissions in mainMissions.subMissions %}
     <tr class="PickupLocation">
-      <th>({{ mainMissions.GetID() }}) {{ subMissions.GetMissionText() }} <a hx-post="/delete/{{ mainMissions.GetID() }}" hx-target="#content" hx-swap="outerHTML" class="close">X</a></th>
+      <th>({{ mainMissions.GetID() }}) {{ subMissions.GetMissionText() }} <a hx-delete="/delete/{{ mainMissions.GetID() }}" hx-target="#content" hx-swap="outerHTML" class="close">X</a></th>
     </tr>
     {% for dropLocations in subMissions.dropLocations %}
     <tr class="Cargo">
