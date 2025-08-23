@@ -26,6 +26,8 @@ ocr_string_fixes = json.loads(requests.get("https://github.com/KenshiHH/SC_Hauli
 script_dir = os.path.dirname(os.path.abspath(__file__))+"\\Tesseract-OCR"
 
 pytesseract.pytesseract.tesseract_cmd = os.path.join(script_dir, 'tesseract.exe')
+if not os.path.exists(os.path.join(script_dir, 'tesseract.exe')):
+    raise Exception("tesseract.exe not found in path: "+script_dir)
 
 app = Flask(__name__)
 
