@@ -5,6 +5,7 @@ from flask import render_template, request
 from flask import redirect
 import uuid
 import ctypes
+import os
 
 
 ####config
@@ -15,6 +16,16 @@ user32 = ctypes.windll.user32
 screen_width = user32.GetSystemMetrics(0)
 screen_height = user32.GetSystemMetrics(1)
 
+#load json for ocr string fixes
+import requests
+import json
+ocr_string_fixes = json.loads(requests.get("https://github.com/KenshiHH/SC_HaulingHelper/raw/refs/heads/main/ocrfixes.json").text)
+
+
+# Set the path to tesseract.exe in the same folder as the script
+script_dir = os.path.dirname(os.path.abspath(__file__))+"\\Tesseract-OCR"
+
+pytesseract.pytesseract.tesseract_cmd = os.path.join(script_dir, 'tesseract.exe')
 
 app = Flask(__name__)
 
@@ -316,7 +327,6 @@ class MissionDatabase:
             for j in i.subMissions:
                 self.pickupLocations[j.pickupLocation] = 0                     
 
-
 missionDatabase = MissionDatabase()
 
 def ExtractReward():
@@ -342,26 +352,12 @@ def ExtractReward():
 
 def ExtractMissionInfo():
     global missionDatabase
+    global ocr_string_fixes
 
     mission_coords = (screen_width*0.62, screen_height*0.25, screen_width*0.9, screen_height*0.70)
     screenshot = ImageGrab.grab(mission_coords)
 
     text = pytesseract.image_to_string(screenshot,config='--psm 6 --oem 3')
-
-    stringFixes = {
-        '$':"S",
-        'Teasa Spaceport':'Teasa Spaceport (Lorville)',
-        'HUR-LS':'HUR-L5',
-        'S1DCO06':'S1DC06',
-        'HUR-L55':'HUR-L5',
-        'HUR-LS5':'HUR-L5',
-        'HDMS-Periman':'HDMS-Perlman',
-        'S1DCO6':'S1DC06',
-        'NB Int': 'NB Int. Spaceport (New Babbage)',
-        'S4LDO1':'S4LD01',
-        'SMCa':'SMCA',
-        'Depot SS4LD':'Depot S4LD'
-    }
 
     text =text.replace('© ', '') #cleanup
     missionText = []
@@ -387,15 +383,24 @@ def ExtractMissionInfo():
                     cargo = cargo.split("from ")[0]
                     cargo = cargo.replace(' ',"")
                     pickup = i.split("from ")[1]
-                    for k in stringFixes:
-                        pickup = pickup.replace(k,stringFixes[k])
+                    for k in ocr_string_fixes:
+                        pickup = pickup.replace(k,ocr_string_fixes[k])
                     newSubMission.AddPickupInfo(cargo, pickup)
                     bFoundPickup = True
 
                 if "Deliver" in i:
-                    for k in stringFixes:
-                        i = i.replace(k,stringFixes[k]) # fix commong ocr errors
-
+                    for k in ocr_string_fixes:
+                        i = i.replace(k,ocr_string_fixes[k]) # fix commong ocr errors
+                    if " at " in i:
+                        i = i.split(" at ")[0]
+                    if " in " in i:
+                        i = i.split(" in ")[0]
+                    if " on " in i:
+                        i = i.split(" on ")[0]
+                    if " above " in i:
+                        i = i.split(" above ")[0]
+                    if "above " in i:
+                        i = i.split("above ")[0]
                     scu = i.split("Deliver 0/")[1].split(" SCU")[0]
                     newSubMission.scu += int(scu)
                     target = i.split("to ")[1].replace('\n'," ")
