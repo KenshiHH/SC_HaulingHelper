@@ -19,7 +19,7 @@ screen_height = user32.GetSystemMetrics(1)
 #load json for ocr string fixes
 import requests
 import json
-ocr_string_fixes = json.loads(requests.get("https://github.com/KenshiHH/SC_HaulingHelper/raw/refs/heads/main/ocrfixes.json").text)
+ocr_string_fixes = json.loads(requests.get("https://github.com/KenshiHH/SC_HaulingHelper/raw/refs/heads/ocrfixes/ocrfixes.json").text)
 
 
 # Set the path to tesseract.exe in the same folder as the script
