@@ -33,8 +33,8 @@ jobs:
           
       - name: Download English traineddata
         run: |
-          curl -L -o Tesseract-OCR/tessdata/eng.traineddata https://raw.githubusercontent.com/tesseract-ocr/tessdata/main/eng.traineddata
-          ls -lh Tesseract-OCR/tessdata
+          curl.exe -L -o "Tesseract-OCR/tessdata/eng.traineddata" https://raw.githubusercontent.com/tesseract-ocr/tessdata/main/eng.traineddata
+          Get-ChildItem "Tesseract-OCR/tessdata"
 
       - name: Build executable with PyInstaller
         run: |
