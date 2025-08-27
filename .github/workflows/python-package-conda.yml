@@ -33,7 +33,6 @@ jobs:
           
       - name: Download English traineddata
         run: |
-          mkdir -p Tesseract-OCR/tessdata
           curl -L -o Tesseract-OCR/tessdata/eng.traineddata https://raw.githubusercontent.com/tesseract-ocr/tessdata/main/eng.traineddata
           ls -lh Tesseract-OCR/tessdata
 
