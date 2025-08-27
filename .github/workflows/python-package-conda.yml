@@ -30,10 +30,16 @@ jobs:
           curl.exe -L -o tesseract-installer.exe https://sourceforge.net/projects/tesseract-ocr.mirror/files/5.5.0/tesseract-ocr-w64-setup-5.5.0.20241111.exe/download
           7z x tesseract-installer.exe -oTesseract-OCR -y
           dir Tesseract-OCR
+          
+      - name: Download English traineddata
+        run: |
+          mkdir -p Tesseract-OCR/tessdata
+          curl -L -o Tesseract-OCR/tessdata/eng.traineddata https://raw.githubusercontent.com/tesseract-ocr/tessdata/main/eng.traineddata
+          ls -lh Tesseract-OCR/tessdata
 
       - name: Build executable with PyInstaller
         run: |
-          pyinstaller --onefile helper.py `
+          pyinstaller --onefile helper.py --name "SCHelper" --optimize "2" `
             --add-data "static;static" `
             --add-data "templates;templates" `
             --add-data "Tesseract-OCR;Tesseract-OCR"
