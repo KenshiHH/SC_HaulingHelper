@@ -25,20 +25,18 @@ jobs:
           if exist requirements.txt ( pip install -r requirements.txt )
           pip install pyinstaller
           
-      - name: Download and install Tesseract (Windows build)
-        shell: bash
+      - name: Extract Tesseract (Windows build)
         run: |
-          curl -L -o tesseract-installer.exe https://digi.bib.uni-mannheim.de/tesseract/tesseract-ocr-w64-setup-v5.3.0.20221214.exe
-          ./tesseract-installer.exe /SILENT /VERYSILENT /NORESTART
-          echo "Tesseract installed to C:\Program Files\Tesseract-OCR"
-          ls -R "/c/Program Files/Tesseract-OCR"
+          curl.exe -L -o tesseract-installer.exe https://digi.bib.uni-mannheim.de/tesseract/tesseract-ocr-w64-setup-v5.3.0.20221214.exe
+          7z x tesseract-installer.exe -oTesseract-OCR -y
+          dir Tesseract-OCR
 
       - name: Build executable with PyInstaller
         run: |
           pyinstaller --onefile helper.py `
             --add-data "static;static" `
             --add-data "templates;templates" `
-            --add-data "C:\Program Files\Tesseract-OCR;Tesseract-OCR"
+            --add-data "Tesseract-OCR;Tesseract-OCR"
             
       - name: Upload artifact
         uses: actions/upload-artifact@v4
