@@ -25,9 +25,9 @@ jobs:
           if exist requirements.txt ( pip install -r requirements.txt )
           pip install pyinstaller
           
-      - name: Extract Tesseract (Windows build)
+      - name: Download and extract Tesseract 5.5.0 (Windows build)
         run: |
-          curl.exe -L -o tesseract-installer.exe https://digi.bib.uni-mannheim.de/tesseract/tesseract-ocr-w64-setup-v5.3.0.20221214.exe
+          curl.exe -L -o tesseract-installer.exe https://sourceforge.net/projects/tesseract-ocr.mirror/files/5.5.0/tesseract-ocr-w64-setup-5.5.0.20241111.exe/download
           7z x tesseract-installer.exe -oTesseract-OCR -y
           dir Tesseract-OCR
 
