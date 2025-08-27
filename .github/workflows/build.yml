@@ -64,23 +64,12 @@ jobs:
           echo "body=Automated build from commit $commit on $date at $time UTC" >> $env:GITHUB_OUTPUT
           
       - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.release_info.outputs.tag }}
-          release_name: ${{ steps.release_info.outputs.name }}
+          name: ${{ steps.release_info.outputs.name }}
           body: ${{ steps.release_info.outputs.body }}
           draft: false
           prerelease: ${{ steps.release_info.outputs.prerelease }}
-          
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: dist/SCHelper.exe
-          asset_name: SCHelper.exe
-          asset_content_type: application/octet-stream
+          files: dist/SCHelper.exe
+          token: ${{ secrets.GITHUB_TOKEN }}
