@@ -26,11 +26,12 @@ jobs:
           pip install pyinstaller
           
       - name: Download and install Tesseract (Windows build)
+        shell: bash
         run: |
-          Invoke-WebRequest -Uri "https://digi.bib.uni-mannheim.de/tesseract/tesseract-ocr-w64-setup-v5.3.0.20221214.exe" -OutFile tesseract-installer.exe
-          Start-Process tesseract-installer.exe -ArgumentList "/SILENT" -Wait
-          Write-Host "Tesseract installed to C:\Program Files\Tesseract-OCR"
-          Get-ChildItem "C:\Program Files\Tesseract-OCR"
+          curl -L -o tesseract-installer.exe https://digi.bib.uni-mannheim.de/tesseract/tesseract-ocr-w64-setup-v5.3.0.20221214.exe
+          ./tesseract-installer.exe /SILENT /VERYSILENT /NORESTART
+          echo "Tesseract installed to C:\Program Files\Tesseract-OCR"
+          ls -R "/c/Program Files/Tesseract-OCR"
 
       - name: Build executable with PyInstaller
         run: |
