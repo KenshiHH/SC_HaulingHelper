@@ -385,6 +385,16 @@ def ExtractMissionInfo():
                     cargo = cargo.split("from ")[0]
                     cargo = cargo.replace(' ',"")
                     pickup = i.split("from ")[1]
+                    if " at " in i:
+                        i = i.split(" at ")[0]
+                    if " in " in i:
+                        i = i.split(" in ")[0]
+                    if " on " in i:
+                        i = i.split(" on ")[0]
+                    if " above " in i:
+                        i = i.split(" above ")[0]
+                    if "above " in i:
+                        i = i.split("above ")[0]
                     for k in ocr_string_fixes:
                         pickup = pickup.replace(k,ocr_string_fixes[k])
                     newSubMission.AddPickupInfo(cargo, pickup)
