@@ -72,4 +72,4 @@ jobs:
           draft: false
           prerelease: ${{ steps.release_info.outputs.prerelease }}
           files: dist/SCHelper.exe
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.RELEASE_TOKEN }}
