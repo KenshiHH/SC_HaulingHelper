@@ -1,5 +1,0 @@
-opencv-python
-Pillow
-pytesseract
-flask
-flask_scss
