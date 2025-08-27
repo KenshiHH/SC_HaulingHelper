@@ -35,10 +35,7 @@ jobs:
 
       - name: Build executable with PyInstaller
         run: |
-          pyinstaller --onefile helper.py ^
-            --add-data "static;static" ^
-            --add-data "templates;templates" ^
-            --add-data "Tesseract-OCR;Tesseract-OCR"
+          pyinstaller --onefile helper.py --add-data "static;static" --add-data "templates;templates" --add-data "Tesseract-OCR;Tesseract-OCR"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
