@@ -1,23 +1,22 @@
-name: Build Executable (Windows)
-
+name: Build Executable (Windows) and Release
 on:
   push:
     branches:
       - main   # change to your branch if needed
+  workflow_dispatch:  # Allow manual triggering
 
 jobs:
   build:
     runs-on: windows-latest
-
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
-
+        
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-
+          
       - name: Install dependencies
         shell: cmd
         run: |
@@ -34,7 +33,7 @@ jobs:
       - name: Download English traineddata
         run: |
           curl.exe -L -o "Tesseract-OCR/tessdata/eng.traineddata" https://raw.githubusercontent.com/tesseract-ocr/tessdata/main/eng.traineddata
-
+          
       - name: Build executable with PyInstaller
         run: |
           pyinstaller --onefile helper.py --name "SCHelper" --optimize "2" `
@@ -47,3 +46,30 @@ jobs:
         with:
           name: helper-executable
           path: dist/SCHelper.exe
+          
+      - name: Generate release info
+        id: release_info
+        run: |
+          $date = Get-Date -Format "yyyy-MM-dd"
+          $time = Get-Date -Format "HH:mm"
+          $commit = "${{ github.sha }}".Substring(0,7)
+          
+          $tag = "build-$date-$commit"
+          $name = "Development Build $date ($commit)"
+          $prerelease = "true"
+          
+          echo "tag=$tag" >> $env:GITHUB_OUTPUT
+          echo "name=$name" >> $env:GITHUB_OUTPUT
+          echo "prerelease=$prerelease" >> $env:GITHUB_OUTPUT
+          echo "body=Automated build from commit $commit on $date at $time UTC" >> $env:GITHUB_OUTPUT
+          
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release_info.outputs.tag }}
+          name: ${{ steps.release_info.outputs.name }}
+          body: ${{ steps.release_info.outputs.body }}
+          draft: false
+          prerelease: ${{ steps.release_info.outputs.prerelease }}
+          files: dist/SCHelper.exe
+          token: ${{ secrets.RELEASE_TOKEN }}
