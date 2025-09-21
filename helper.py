@@ -9,7 +9,7 @@ import os
 
 
 ####config
-bDebug = True
+bDebug = False
 bTestMissions = False
 
 #get screen resolution
