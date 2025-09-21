@@ -9,7 +9,8 @@ import os
 
 
 ####config
-bDebug = False
+bDebug = True
+bTestMissions = False
 
 #get screen resolution
 user32 = ctypes.windll.user32
@@ -361,9 +362,13 @@ def ExtractMissionInfo():
 
     text = pytesseract.image_to_string(screenshot,config='--psm 6 --oem 3')
 
-    text =text.replace('© ', '') #cleanup
+    text = text.replace('© ', '') #cleanup
+    
     missionText = []
-
+    if bDebug:
+        print("OCR Text:")
+        print(text)
+        print("------")
     ocrArray = text.split(r"Collect")
     del ocrArray[0] #remove "primary objectives element"
     for i in ocrArray:
@@ -374,8 +379,13 @@ def ExtractMissionInfo():
 
     try:
         for i in ocrArray:
+            i = i.replace("\n", " ")
             bFoundPickup = False
             details = i.split(".")
+            if bDebug:
+                print("Details:")
+                print(details)
+                print("------")
             del details[len(details)-1] # remove last array index, it is empty
             newSubMission = SubMission()
             for i in details:
@@ -424,11 +434,12 @@ def ExtractMissionInfo():
             missionDatabase.AddMainMission(newMission)
 
     except Exception as error:
+        print("Error extracting mission info")
         print("An exception occurred:", error)
 
 
 
-if bDebug: # creates test missions
+if bDebug and bTestMissions: # creates test missions
     newMission = MainMission()
     newSubMission = SubMission()
     newSubMission.AddPickupInfo("Stims", "Everus Harbor")
