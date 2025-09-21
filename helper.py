@@ -393,7 +393,7 @@ def ExtractMissionInfo():
                 if "from" in i:
                     cargo = i.split("Collect ")[1]
                     cargo = cargo.split("from ")[0]
-                    cargo = cargo.replace(' ',"")
+                    #cargo = cargo.replace(' ',"")
                     pickup = i.split("from ")[1]
                     if " at " in i:
                         i = i.split(" at ")[0]
