@@ -1,4 +1,4 @@
-from PIL import ImageGrab
+from PIL import ImageGrab, ImageOps, ImageFilter
 import pytesseract
 from flask import Flask
 from flask import render_template, request
@@ -336,6 +336,9 @@ def ExtractReward():
     reward = 0
     auec_coords = (screen_width*0.66, screen_height*0.1, screen_width*0.95, screen_height*0.26)
     screenshot_auec = ImageGrab.grab(auec_coords)
+    screenshot_auec = ImageOps.grayscale(screenshot_auec)
+    screenshot_auec = screenshot_auec.filter(ImageFilter.FIND_EDGES)
+    screenshot_auec = screenshot_auec.filter(ImageFilter.SMOOTH)
     text = pytesseract.image_to_string(screenshot_auec,config='--psm 6 --oem 3' )
     print(text)
     text = text.split('\n')
@@ -359,6 +362,9 @@ def ExtractMissionInfo():
 
     mission_coords = (screen_width*0.62, screen_height*0.25, screen_width*0.9, screen_height*0.70)
     screenshot = ImageGrab.grab(mission_coords)
+    screenshot = ImageOps.grayscale(screenshot)
+    screenshot = screenshot.filter(ImageFilter.FIND_EDGES)
+    screenshot = screenshot.filter(ImageFilter.SMOOTH)
 
     text = pytesseract.image_to_string(screenshot,config='--psm 6 --oem 3')
 
@@ -393,6 +399,7 @@ def ExtractMissionInfo():
                 if "from" in i:
                     cargo = i.split("Collect ")[1]
                     cargo = cargo.split("from ")[0]
+                    cargo = cargo.strip()
                     #cargo = cargo.replace(' ',"")
                     pickup = i.split("from ")[1]
                     if " at " in i:
@@ -429,6 +436,7 @@ def ExtractMissionInfo():
                     newSubMission.AddDropLocation(cargo,int(scu), target)
 
             newMission.AddSubMission(newSubMission)
+            print(newSubMission.GetMissionText())
         if bFoundPickup:
             newMission.auec = ExtractReward()
             missionDatabase.AddMainMission(newMission)
