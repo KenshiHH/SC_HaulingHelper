@@ -23,10 +23,13 @@ screen_height = user32.GetSystemMetrics(1)
 import requests
 import json
 ocr_string_fixes = json.loads(requests.get("https://github.com/KenshiHH/SC_HaulingHelper/raw/refs/heads/ocrfixes/ocrfixes.json").text)
-known_locations = json.loads(requests.get("https://github.com/KenshiHH/SC_HaulingHelper/raw/refs/heads/ocrfixes/known_locations.json").text)
+known_locations = json.loads(requests.get("https://github.com/KenshiHH/SC_HaulingHelper/raw/refs/heads/main/known_locations.json").text)
 
 def fix_location(raw: str, threshold: int = 70) -> str:
     if raw in known_locations:
+        for k in ocr_string_fixes:
+            if k in raw:
+                raw = raw.replace(k, ocr_string_fixes[k])
         return raw
     result = process.extractOne(raw, known_locations, scorer=fuzz.WRatio)
     if result and result[1] >= threshold:
@@ -418,9 +421,10 @@ def ExtractMissionInfo():
                 cargo    = m.group('cargo')                 # "Corundum"
                 target = m.group('deliver_target')      # "Teasa Spaceport in Lorville"
                 pickup = m.group('collect_from')        # "Everus Harbor"
-            for k in ocr_string_fixes:
-                pickup = pickup.replace(k,ocr_string_fixes[k])
-                target = target.replace(k,ocr_string_fixes[k])
+            
+            target = fix_location(target)
+            pickup = fix_location(pickup)
+
             print(f"Extracted: \n{scu} SCU \n{cargo} \nto {target}\ncollect from {pickup}")
             newSubMission.scu += int(scu)
             newSubMission.AddPickupInfo(cargo, pickup)
