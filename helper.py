@@ -6,6 +6,8 @@ from flask import redirect
 import uuid
 import ctypes
 import os
+import re
+from rapidfuzz import process, fuzz
 
 
 ####config
@@ -21,6 +23,15 @@ screen_height = user32.GetSystemMetrics(1)
 import requests
 import json
 ocr_string_fixes = json.loads(requests.get("https://github.com/KenshiHH/SC_HaulingHelper/raw/refs/heads/ocrfixes/ocrfixes.json").text)
+known_locations = json.loads(requests.get("https://github.com/KenshiHH/SC_HaulingHelper/raw/refs/heads/ocrfixes/known_locations.json").text)
+
+def fix_location(raw: str, threshold: int = 70) -> str:
+    if raw in known_locations:
+        return raw
+    result = process.extractOne(raw, known_locations, scorer=fuzz.WRatio)
+    if result and result[1] >= threshold:
+        return result[0]
+    return raw  # no confident match → keep original
 
 
 # Set the path to tesseract.exe in the same folder as the script
@@ -374,73 +385,50 @@ def ExtractMissionInfo():
     if bDebug:
         print("OCR Text:")
         print(text)
-        print("------")
-    ocrArray = text.split(r"Collect")
-    del ocrArray[0] #remove "primary objectives element"
-    for i in ocrArray:
-        missionText.append("Collect"+i)
+        print("---END---")
 
-    ocrArray = missionText
+    text = re.sub(r'PRIMARY OBJECTIVES\s*\n', '', text)
+    text = re.sub(r'[^\w\s\n./\-]+\s*(?=Deliver)', '', text)
+    text = re.sub(r'[\|\s]+$', '', text, flags=re.MULTILINE)
+    text = re.sub(r'(?<!\.)(\n)(?=[A-Z][a-z])', ' ', text)
+    ocrArray = re.split(r'(?=Deliver)', text)
+    ocrArray = [p.strip() for p in ocrArray if p.strip()]
+
+
+
+    #del ocrArray[len(ocrArray)-1] #remove last array index, it is empty
+
+    #ocrArray = missionText
     newMission = MainMission()
 
     try:
+        print("ocr: "+str(len(ocrArray)))
         for i in ocrArray:
-            i = i.replace("\n", " ")
-            bFoundPickup = False
-            details = i.split(".")
-            if bDebug:
-                print("Details:")
-                print(details)
-                print("------")
-            del details[len(details)-1] # remove last array index, it is empty
             newSubMission = SubMission()
-            for i in details:
-
-                if "from" in i:
-                    cargo = i.split("Collect ")[1]
-                    cargo = cargo.split("from ")[0]
-                    cargo = cargo.strip()
-                    #cargo = cargo.replace(' ',"")
-                    pickup = i.split("from ")[1]
-                    if " at " in i:
-                        i = i.split(" at ")[0]
-                    if " in " in i:
-                        i = i.split(" in ")[0]
-                    if " on " in i:
-                        i = i.split(" on ")[0]
-                    if " above " in i:
-                        i = i.split(" above ")[0]
-                    if "above " in i:
-                        i = i.split("above ")[0]
-                    for k in ocr_string_fixes:
-                        pickup = pickup.replace(k,ocr_string_fixes[k])
-                    newSubMission.AddPickupInfo(cargo, pickup)
-                    bFoundPickup = True
-
-                if "Deliver" in i:
-                    for k in ocr_string_fixes:
-                        i = i.replace(k,ocr_string_fixes[k]) # fix commong ocr errors
-                    if " at " in i:
-                        i = i.split(" at ")[0]
-                    if " in " in i:
-                        i = i.split(" in ")[0]
-                    if " on " in i:
-                        i = i.split(" on ")[0]
-                    if " above " in i:
-                        i = i.split(" above ")[0]
-                    if "above " in i:
-                        i = i.split("above ")[0]
-                    scu = i.split("Deliver 0/")[1].split(" SCU")[0]
-                    newSubMission.scu += int(scu)
-                    target = i.split("to ")[1].replace('\n'," ")
-                    newSubMission.AddDropLocation(cargo,int(scu), target)
-
+            print("pattern test string: "+i)
+            PATTERN = re.compile(
+                r'Deliver \d+/(?P<scu>\d+) SCU of (?P<cargo>[\w\s]+?) to (?P<deliver_target>.+?)\.'
+                r'.*?'
+                r'Collect \w+ from (?P<collect_from>.+?)(?:\.|$)',
+                re.DOTALL
+            )
+            m = PATTERN.search(i)
+            if m:
+                scu    = int(m.group('scu'))            # 3
+                cargo    = m.group('cargo')                 # "Corundum"
+                target = m.group('deliver_target')      # "Teasa Spaceport in Lorville"
+                pickup = m.group('collect_from')        # "Everus Harbor"
+            for k in ocr_string_fixes:
+                pickup = pickup.replace(k,ocr_string_fixes[k])
+                target = target.replace(k,ocr_string_fixes[k])
+            print(f"Extracted: \n{scu} SCU \n{cargo} \nto {target}\ncollect from {pickup}")
+            newSubMission.scu += int(scu)
+            newSubMission.AddPickupInfo(cargo, pickup)
+            newSubMission.AddDropLocation(cargo,int(scu), target)
             newMission.AddSubMission(newSubMission)
-            print(newSubMission.GetMissionText())
-        if bFoundPickup:
             newMission.auec = ExtractReward()
-            missionDatabase.AddMainMission(newMission)
-
+        missionDatabase.AddMainMission(newMission)
+            
     except Exception as error:
         print("Error extracting mission info")
         print("An exception occurred:", error)
