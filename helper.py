@@ -14,7 +14,7 @@ import numpy as np
 ####config
 bDebug = False
 bTestMissions = False
-bLocalTest = False
+bLocalTest = True
 currentLocalScreenshot = 0
 
 #get screen resolution
@@ -383,7 +383,8 @@ def ExtractReward():
     screenshot_auec = cv2.bitwise_not(screenshot_auec)
 
     text = pytesseract.image_to_string(screenshot_auec,config=custom_config)
-    print(text)
+    if bDebug:
+        print(text)
     text = text.split('\n')
     
 
@@ -421,7 +422,6 @@ def ExtractMissionInfo():
     screenshot = cv2.cvtColor(screenshot, cv2.COLOR_RGB2GRAY)
     screenshot = cv2.bitwise_not(screenshot)
     text = pytesseract.image_to_string(screenshot,config=custom_config)
-    print(text)
 
     text = text.replace('© ', '') #cleanup
     
@@ -446,10 +446,8 @@ def ExtractMissionInfo():
     newMission = MainMission()
 
     try:
-        print("ocr: "+str(len(ocrArray)))
         for i in ocrArray:
             newSubMission = SubMission()
-            print("pattern test string: "+i)
             PATTERN = re.compile(
                 r'Deliver \d+/(?P<scu>\d+) SCU of (?P<cargo>[\w\s]+?) to (?P<deliver_target>.+?)\.'
                 r'.*?'
@@ -470,8 +468,8 @@ def ExtractMissionInfo():
                     target = target.replace(k, ocr_string_fixes[k])
                 if k in pickup:
                     pickup = pickup.replace(k, ocr_string_fixes[k])
-
-            print(f"Extracted: \n{scu} SCU \n{cargo} \nto {target}\ncollect from {pickup}")
+            if bDebug:
+                print(f"Extracted: \n{scu} SCU \n{cargo} \nto {target}\ncollect from {pickup}")
             newSubMission.scu += int(scu)
             newSubMission.AddPickupInfo(cargo, pickup)
             newSubMission.AddDropLocation(cargo,int(scu), target)
