@@ -14,7 +14,7 @@ import numpy as np
 ####config
 bDebug = False
 bTestMissions = False
-bLocalTest = True
+bLocalTest = False
 currentLocalScreenshot = 0
 
 #get screen resolution
