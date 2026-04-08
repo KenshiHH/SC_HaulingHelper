@@ -14,6 +14,8 @@ import numpy as np
 ####config
 bDebug = False
 bTestMissions = False
+bLocalTest = False
+currentLocalScreenshot = 0
 
 #get screen resolution
 user32 = ctypes.windll.user32
@@ -34,7 +36,7 @@ game_icons = '◇◆□■○●'
 
 custom_config = f'--oem 3 --psm 6 -c tessedit_char_blacklist={blacklist_chars}{game_icons}'
 
-def fix_location(raw: str, threshold: int = 70) -> str:
+def fix_location(raw: str, threshold: int = 90) -> str:
     if raw in known_locations:
         for k in ocr_string_fixes:
             if k in raw:
@@ -45,6 +47,10 @@ def fix_location(raw: str, threshold: int = 70) -> str:
         return result[0]
     return raw  # no confident match → keep original
 
+def getLocationGroups():
+    global missionDatabase
+
+    return
 
 # Set the path to tesseract.exe in the same folder as the script
 script_dir = os.path.dirname(os.path.abspath(__file__))+"\\Tesseract-OCR"
@@ -357,11 +363,21 @@ missionDatabase = MissionDatabase()
 
 def ExtractReward():
     reward = 0
-    auec_coords = (screen_width*0.66, screen_height*0.1, screen_width*0.95, screen_height*0.26)
-
-
-    screenshot_auec = ImageGrab.grab(auec_coords)
-    screenshot_auec = np.array(screenshot_auec)
+    
+    if bLocalTest:
+        global currentLocalScreenshot
+        y1 = int(screen_height * 0.01)
+        y2 = int(screen_height * 0.26)
+        x1 = int(screen_width * 0.66)
+        x2 = int(screen_width * 0.95)
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        image_path = os.path.join(script_dir, '4_7', f'test_{currentLocalScreenshot}.png')
+        screenshot_auec = cv2.imread(image_path)
+        screenshot_auec = screenshot_auec[y1:y2, x1:x2]
+    else:
+        auec_coords = (screen_width*0.66, screen_height*0.1, screen_width*0.95, screen_height*0.26)
+        screenshot_auec = ImageGrab.grab(auec_coords)
+        screenshot_auec = np.array(screenshot_auec)
     screenshot_auec = cv2.resize(screenshot_auec, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
     screenshot_auec = cv2.cvtColor(screenshot_auec, cv2.COLOR_RGB2GRAY)
     screenshot_auec = cv2.bitwise_not(screenshot_auec)
@@ -387,9 +403,20 @@ def ExtractMissionInfo():
     global missionDatabase
     global ocr_string_fixes
 
-    mission_coords = (screen_width*0.62, screen_height*0.25, screen_width*0.9, screen_height*0.70)
-    screenshot = ImageGrab.grab(mission_coords)
-    screenshot = np.array(screenshot)
+    if bLocalTest:
+        global currentLocalScreenshot
+        y1 = int(screen_height * 0.25)
+        y2 = int(screen_height * 0.7)
+        x1 = int(screen_width * 0.62)
+        x2 = int(screen_width * 0.9)
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        image_path = os.path.join(script_dir, '4_7', f'test_{currentLocalScreenshot}.png')
+        screenshot = cv2.imread(image_path)
+        screenshot = screenshot[y1:y2, x1:x2]
+    else:
+        mission_coords = (screen_width*0.62, screen_height*0.25, screen_width*0.9, screen_height*0.70)
+        screenshot = ImageGrab.grab(mission_coords)
+        screenshot = np.array(screenshot)
     screenshot = cv2.resize(screenshot, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
     screenshot = cv2.cvtColor(screenshot, cv2.COLOR_RGB2GRAY)
     screenshot = cv2.bitwise_not(screenshot)
@@ -507,6 +534,9 @@ def delete(id):
 
 @app.route('/add/', methods=['POST'])
 def AddMission():
+    global currentLocalScreenshot
+    if bLocalTest:
+        currentLocalScreenshot += 1
     ExtractMissionInfo()
     missionDatabase.sortedMissionManager.CheckForMissions()
     missionDatabase.locationDatabase.GenerateDropPickupList(missionDatabase,True)
