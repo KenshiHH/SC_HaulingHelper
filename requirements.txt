@@ -3,5 +3,5 @@ Pillow
 pytesseract
 flask
 flask_scss
-requests
 rapidfuzz
+requests
