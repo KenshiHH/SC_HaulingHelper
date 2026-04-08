@@ -8,7 +8,8 @@ import ctypes
 import os
 import re
 from rapidfuzz import process, fuzz
-
+import cv2
+import numpy as np
 
 ####config
 bDebug = False
@@ -24,6 +25,14 @@ import requests
 import json
 ocr_string_fixes = json.loads(requests.get("https://github.com/KenshiHH/SC_HaulingHelper/raw/refs/heads/ocrfixes/ocrfixes.json").text)
 known_locations = json.loads(requests.get("https://github.com/KenshiHH/SC_HaulingHelper/raw/refs/heads/main/known_locations.json").text)
+
+# Moving the space between letters and numbers
+blacklist_chars = '!@#$%^&*()_+-=[]{}|;\'"<>?~`\\¬¦'
+
+# If the game uses those diamond bullet points, add them too:
+game_icons = '◇◆□■○●'
+
+custom_config = f'--oem 3 --psm 6 -c tessedit_char_blacklist={blacklist_chars}{game_icons}'
 
 def fix_location(raw: str, threshold: int = 70) -> str:
     if raw in known_locations:
@@ -349,11 +358,15 @@ missionDatabase = MissionDatabase()
 def ExtractReward():
     reward = 0
     auec_coords = (screen_width*0.66, screen_height*0.1, screen_width*0.95, screen_height*0.26)
+
+
     screenshot_auec = ImageGrab.grab(auec_coords)
-    screenshot_auec = ImageOps.grayscale(screenshot_auec)
-    screenshot_auec = screenshot_auec.filter(ImageFilter.FIND_EDGES)
-    screenshot_auec = screenshot_auec.filter(ImageFilter.SMOOTH)
-    text = pytesseract.image_to_string(screenshot_auec,config='--psm 6 --oem 3' )
+    screenshot_auec = np.array(screenshot_auec)
+    screenshot_auec = cv2.resize(screenshot_auec, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+    screenshot_auec = cv2.cvtColor(screenshot_auec, cv2.COLOR_RGB2GRAY)
+    screenshot_auec = cv2.bitwise_not(screenshot_auec)
+
+    text = pytesseract.image_to_string(screenshot_auec,config=custom_config)
     print(text)
     text = text.split('\n')
     
@@ -376,11 +389,12 @@ def ExtractMissionInfo():
 
     mission_coords = (screen_width*0.62, screen_height*0.25, screen_width*0.9, screen_height*0.70)
     screenshot = ImageGrab.grab(mission_coords)
-    screenshot = ImageOps.grayscale(screenshot)
-    screenshot = screenshot.filter(ImageFilter.FIND_EDGES)
-    screenshot = screenshot.filter(ImageFilter.SMOOTH)
-
-    text = pytesseract.image_to_string(screenshot,config='--psm 6 --oem 3')
+    screenshot = np.array(screenshot)
+    screenshot = cv2.resize(screenshot, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+    screenshot = cv2.cvtColor(screenshot, cv2.COLOR_RGB2GRAY)
+    screenshot = cv2.bitwise_not(screenshot)
+    text = pytesseract.image_to_string(screenshot,config=custom_config)
+    print(text)
 
     text = text.replace('© ', '') #cleanup
     
@@ -424,6 +438,11 @@ def ExtractMissionInfo():
             
             target = fix_location(target)
             pickup = fix_location(pickup)
+            for k in ocr_string_fixes:
+                if k in target:
+                    target = target.replace(k, ocr_string_fixes[k])
+                if k in pickup:
+                    pickup = pickup.replace(k, ocr_string_fixes[k])
 
             print(f"Extracted: \n{scu} SCU \n{cargo} \nto {target}\ncollect from {pickup}")
             newSubMission.scu += int(scu)
