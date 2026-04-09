@@ -1,4 +1,4 @@
-from PIL import ImageGrab, ImageOps, ImageFilter
+from PIL import ImageGrab
 import pytesseract
 from flask import Flask
 from flask import render_template, request
@@ -10,6 +10,7 @@ import re
 from rapidfuzz import process, fuzz
 import cv2
 import numpy as np
+from collections import Counter
 
 ####config
 bDebug = False
@@ -25,34 +26,48 @@ screen_height = user32.GetSystemMetrics(1)
 #load json for ocr string fixes
 import requests
 import json
-ocr_string_fixes = json.loads(requests.get("https://github.com/KenshiHH/SC_HaulingHelper/raw/refs/heads/ocrfixes/ocrfixes.json").text)
-known_locations = json.loads(requests.get("https://github.com/KenshiHH/SC_HaulingHelper/raw/refs/heads/main/known_locations.json").text)
+if bDebug:
+    with open('ocrfixes.json') as f:
+        ocr_string_fixes = json.load(f)
+    with open('known_locations.json') as f:
+        known_locations = json.load(f)
 
-# Moving the space between letters and numbers
+else:
+    ocr_string_fixes = json.loads(requests.get("https://github.com/KenshiHH/SC_HaulingHelper/raw/refs/heads/main/ocrfixes.json").text)
+    known_locations = json.loads(requests.get("https://github.com/KenshiHH/SC_HaulingHelper/raw/refs/heads/main/known_locations.json").text)
+
+#ocr config
 blacklist_chars = '!@#$%^&*()_+-=[]{}|;\'"<>?~`\\¬¦'
-
-# If the game uses those diamond bullet points, add them too:
 game_icons = '◇◆□■○●'
-
 custom_config = f'--oem 3 --psm 6 -c tessedit_char_blacklist={blacklist_chars}{game_icons}'
 
 def fix_location(raw: str, threshold: int = 90) -> str:
-    if raw in known_locations:
-        for k in ocr_string_fixes:
-            if k in raw:
-                raw = raw.replace(k, ocr_string_fixes[k])
-        return raw
-    result = process.extractOne(raw, known_locations, scorer=fuzz.WRatio)
-    if result and result[1] >= threshold:
-        return result[0]
-    return raw  # no confident match → keep original
+    """
+    Attempt to fix a location string by replacing known OCR errors with correct strings,
+    and then trying to find a match in the known locations database.
 
-def getLocationGroups():
-    global missionDatabase
+    Args:
+        raw (str): The original location string.
+        threshold (int, optional): The minimum confidence required for a match to be considered.
+            Defaults to 90.
 
-    return
+    Returns:
+        str: The fixed location string, or the original string if no confident match was found.
+    """
 
-# Set the path to tesseract.exe in the same folder as the script
+    if raw not in known_locations:
+        result = process.extractOne(raw, known_locations, scorer=fuzz.WRatio)
+        if result and result[1] >= threshold:
+            raw = result[0]
+    
+    for k in ocr_string_fixes:
+        if k in raw:
+            raw = raw.replace(k, ocr_string_fixes[k])
+
+    return raw  # no  match keep original
+
+
+# Set the path to tesseract.exe
 script_dir = os.path.dirname(os.path.abspath(__file__))+"\\Tesseract-OCR"
 
 pytesseract.pytesseract.tesseract_cmd = os.path.join(script_dir, 'tesseract.exe')
@@ -171,6 +186,7 @@ class LocationDatabase:
         for i in self.dropLocations:
             if i.name == location:
                 return i.cargo
+            
 
     def GetCargoTab3(self,location:str):
         pickupCargo = self.GetPickupList(location)
@@ -402,7 +418,6 @@ def ExtractReward():
 
 def ExtractMissionInfo():
     global missionDatabase
-    global ocr_string_fixes
 
     if bLocalTest:
         global currentLocalScreenshot
@@ -422,10 +437,7 @@ def ExtractMissionInfo():
     screenshot = cv2.cvtColor(screenshot, cv2.COLOR_RGB2GRAY)
     screenshot = cv2.bitwise_not(screenshot)
     text = pytesseract.image_to_string(screenshot,config=custom_config)
-
-    text = text.replace('© ', '') #cleanup
     
-    missionText = []
     if bDebug:
         print("OCR Text:")
         print(text)
@@ -439,10 +451,6 @@ def ExtractMissionInfo():
     ocrArray = [p.strip() for p in ocrArray if p.strip()]
 
 
-
-    #del ocrArray[len(ocrArray)-1] #remove last array index, it is empty
-
-    #ocrArray = missionText
     newMission = MainMission()
 
     try:
