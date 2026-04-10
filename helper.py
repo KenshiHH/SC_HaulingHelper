@@ -505,8 +505,8 @@ def ExtractReward():
     if bDebug:
         print(text)
     text = text.split('\n')
-    
 
+    print(text)
     try:
         for i in text:
             if "reward" in i.lower():
@@ -552,14 +552,17 @@ def CreateOcrText():
         script_dir = os.path.dirname(os.path.abspath(__file__))
         image_path = os.path.join(script_dir, '4_7', f'test_{currentLocalScreenshot}.png')
         screenshot = cv2.imread(image_path)
-        screenList.append(screenshot[int(extract_mission_coords[1]):int(extract_mission_coords[3]), int(extract_mission_coords[0]):int(extract_mission_coords[2])])#screenshot[extract_mission_coords[1]:extract_mission_coords[3], extract_mission_coords[0]:extract_mission_coords[2]])
-        screenList.append(screenshot[int(auec_coords[1]):int(auec_coords[3]), int(auec_coords[0]):int(auec_coords[2])])#screenshot[auec_coords[1]:auec_coords[3], auec_coords[0]:auec_coords[2]])
-        screenList.append(screenshot[int(container_coords[1]):int(container_coords[3]), int(container_coords[0]):int(container_coords[2])])#screenshot[container_coords[1]:container_coords[3], container_coords[0]:container_coords[2]])
+        screenList.append(screenshot[int(extract_mission_coords[1]):int(extract_mission_coords[3]), int(extract_mission_coords[0]):int(extract_mission_coords[2])])
+        screenList.append(screenshot[int(auec_coords[1]):int(auec_coords[3]), int(auec_coords[0]):int(auec_coords[2])])
+        screenList.append(screenshot[int(container_coords[1]):int(container_coords[3]), int(container_coords[0]):int(container_coords[2])])
     
         for idx, i in enumerate(screenList):
-            #i = cv2.resize(i, None, fx=1, fy=1, interpolation=cv2.INTER_CUBIC)
+            i = cv2.resize(i, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
             i = cv2.cvtColor(i, cv2.COLOR_RGB2GRAY)
+            if idx == 1:
+                i = cv2.threshold(i, 110, 255, cv2.THRESH_BINARY)[1]
             i = cv2.bitwise_not(i)
+            screenList[idx] = i
             cv2.imwrite(f"test{idx}.jpg", i)
 
     else:
@@ -567,6 +570,13 @@ def CreateOcrText():
         screenList.append(screenshot.crop(extract_mission_coords))
         screenList.append(screenshot.crop(auec_coords))
         screenList.append(screenshot.crop(container_coords))
+        for idx, i in enumerate(screenList):
+            i = cv2.resize(i, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+            i = cv2.cvtColor(i, cv2.COLOR_RGB2GRAY)
+            if idx == 1:
+                i = cv2.threshold(i, 110, 255, cv2.THRESH_BINARY)[1]
+            i = cv2.bitwise_not(i)
+            screenList[idx] = i
     threads = []
     for i in range(3):
         thread = threading.Thread(OCR_Results.append(pytesseract.image_to_string(screenList[i],config=custom_config)))
@@ -574,9 +584,6 @@ def CreateOcrText():
         thread.start()
     for t in threads:
         t.join()
-
-    for i in OCR_Results:
-        print(i)
 
 def ExtractMissionInfo():
     global missionDatabase
