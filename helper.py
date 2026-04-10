@@ -11,6 +11,7 @@ from rapidfuzz import process, fuzz
 import cv2
 import numpy as np
 from collections import Counter
+import threading
 
 ####config
 bDebug = False
@@ -36,10 +37,10 @@ else:
     ocr_string_fixes = json.loads(requests.get("https://github.com/KenshiHH/SC_HaulingHelper/raw/refs/heads/main/ocrfixes.json").text)
     known_locations = json.loads(requests.get("https://raw.githubusercontent.com/KenshiHH/SC_HaulingHelper/refs/heads/main/known_locations.json").text)
 
-#ocr config
-blacklist_chars = '!@#$%^&*()_+-=[]{}|;\'"<>?~`\\¬¦'
-game_icons = '◇◆□■○●'
-custom_config = f'--oem 3 --psm 6 -c tessedit_char_blacklist={blacklist_chars}{game_icons}'
+
+
+screenshot = None
+OCR_Results = []
 
 
 def split_containers(cargosize: int, max_size: int) -> list[int]:
@@ -164,10 +165,8 @@ class LocationDatabase:
 
         def getLength(self, location):
             length = 0
-
             if location in self.data:
-                for i in self.data[location]:
-                    length += len(self.data[location][i]) 
+                return(len(self.data[location])) # get_containers 
             return length
 
     class Cargo:
@@ -272,7 +271,6 @@ class LocationDatabase:
                     cargo.missionUUID = i.uuid
                     missionDatabase.locationDatabase.AddDropLocation(k['DropLocation'], cargo)
                     self.GenerateLocationList(k['DropLocation'])
-        
 
     def GetPickupList(self,location:str):
         self.PickUpDatabase.clear()
@@ -308,14 +306,11 @@ class LocationDatabase:
         template = ["","","",""]
         listenarray :list = []
 
-
-        pickupCargoLength = self.PickUpDatabase.getLength(location)
-        dropCargoLength = self.DeliverDatabase.getLength(location)
-        maxLength = max(pickupCargoLength, dropCargoLength)
+        maxLength = max(len(pickupCargo), len(dropCargo))
 
         for i in range(maxLength):
             try:
-                if i < pickupCargoLength:
+                if i < len(pickupCargo):
                     template[0] = f"{pickupCargo[i][2]}x {pickupCargo[i][1]}scu - " 
                     template[1] = f"{pickupCargo[i][0]}" 
                 else:
@@ -325,7 +320,7 @@ class LocationDatabase:
                     template[0] = ""
                     template[1] = ""
             try:
-                if i < dropCargoLength:
+                if i < len(dropCargo):
                     template[2] = f"{dropCargo[i][2]}x {dropCargo[i][1]}scu - "  
                     template[3] = f"{dropCargo[i][0]}" 
                 else:
@@ -503,26 +498,10 @@ missionDatabase = MissionDatabase()
 
 def ExtractReward():
     reward = 0
+    global screenshot
+    global OCR_Results
     
-    if bLocalTest:
-        global currentLocalScreenshot
-        y1 = int(screen_height * 0.01)
-        y2 = int(screen_height * 0.26)
-        x1 = int(screen_width * 0.66)
-        x2 = int(screen_width * 0.95)
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        image_path = os.path.join(script_dir, '4_7', f'test_{currentLocalScreenshot}.png')
-        screenshot_auec = cv2.imread(image_path)
-        screenshot_auec = screenshot_auec[y1:y2, x1:x2]
-    else:
-        auec_coords = (screen_width*0.66, screen_height*0.1, screen_width*0.95, screen_height*0.26)
-        screenshot_auec = ImageGrab.grab(auec_coords)
-        screenshot_auec = np.array(screenshot_auec)
-    screenshot_auec = cv2.resize(screenshot_auec, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
-    screenshot_auec = cv2.cvtColor(screenshot_auec, cv2.COLOR_RGB2GRAY)
-    screenshot_auec = cv2.bitwise_not(screenshot_auec)
-
-    text = pytesseract.image_to_string(screenshot_auec,config=custom_config)
+    text = OCR_Results[1]
     if bDebug:
         print(text)
     text = text.split('\n')
@@ -542,26 +521,12 @@ def ExtractReward():
 
 def ExtractMaxContainerSize():
     global custom_config
-    num = 0
-    if bLocalTest:
-        global currentLocalScreenshot
-        y1 = int(screen_height * 0.26)
-        y2 = int(screen_height * 0.76)
-        x1 = int(screen_width * 0.34)
-        x2 = int(screen_width * 0.62)
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        image_path = os.path.join(script_dir, '4_7', f'test_{currentLocalScreenshot}.png')
-        screenshot = cv2.imread(image_path)
-        screenshot = screenshot[y1:y2, x1:x2]
-    else:
-        container_coords = (screen_width*0.34, screen_height*0.26, screen_width*0.62, screen_height*0.76)
-        screenshot = ImageGrab.grab(container_coords)
-        screenshot = np.array(screenshot)
-    screenshot = cv2.resize(screenshot, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
-    screenshot = cv2.cvtColor(screenshot, cv2.COLOR_RGB2GRAY)
-    screenshot = cv2.bitwise_not(screenshot)
-    cv2.imwrite('test.jpg', screenshot)
-    text = pytesseract.image_to_string(screenshot,config=custom_config)
+    global screenshot
+    global OCR_Results
+    num = 0    
+    #cv2.imwrite('test.jpg', screenshot_containerInfo)
+    #text = pytesseract.image_to_string(screenshot_containerInfo,config=custom_config)
+    text = OCR_Results[2]
     text = text.replace('©', '')
     text = text.replace('\n', '')
     text = text.rsplit('SCU', 1)[0]
@@ -569,28 +534,57 @@ def ExtractMaxContainerSize():
     num = re.search(r'\d+', text).group(0) if text else None
     return int(num)
 
-def ExtractMissionInfo():
-    global missionDatabase
-    global custom_config
+def CreateOcrText():
+    global OCR_Results
+
+    #ocr config
+    blacklist_chars = '!@#$%^&*()_+-=[]{}|;\'"<>?~`\\¬¦'
+    game_icons = '◇◆□■○●'
+    custom_config = f'--oem 3 --psm 6 -c tessedit_char_blacklist={blacklist_chars}{game_icons}'
+
+    OCR_Results.clear()
+    extract_mission_coords = (screen_width*0.62, screen_height*0.25, screen_width*0.9, screen_height*0.70)
+    auec_coords = (screen_width*0.66, screen_height*0.1, screen_width*0.95, screen_height*0.26)
+    container_coords = (screen_width*0.34, screen_height*0.26, screen_width*0.62, screen_height*0.76)
+    screenList = []
 
     if bLocalTest:
-        global currentLocalScreenshot
-        y1 = int(screen_height * 0.25)
-        y2 = int(screen_height * 0.7)
-        x1 = int(screen_width * 0.62)
-        x2 = int(screen_width * 0.9)
         script_dir = os.path.dirname(os.path.abspath(__file__))
         image_path = os.path.join(script_dir, '4_7', f'test_{currentLocalScreenshot}.png')
         screenshot = cv2.imread(image_path)
-        screenshot = screenshot[y1:y2, x1:x2]
+        screenList.append(screenshot[int(extract_mission_coords[1]):int(extract_mission_coords[3]), int(extract_mission_coords[0]):int(extract_mission_coords[2])])#screenshot[extract_mission_coords[1]:extract_mission_coords[3], extract_mission_coords[0]:extract_mission_coords[2]])
+        screenList.append(screenshot[int(auec_coords[1]):int(auec_coords[3]), int(auec_coords[0]):int(auec_coords[2])])#screenshot[auec_coords[1]:auec_coords[3], auec_coords[0]:auec_coords[2]])
+        screenList.append(screenshot[int(container_coords[1]):int(container_coords[3]), int(container_coords[0]):int(container_coords[2])])#screenshot[container_coords[1]:container_coords[3], container_coords[0]:container_coords[2]])
+    
+        for idx, i in enumerate(screenList):
+            #i = cv2.resize(i, None, fx=1, fy=1, interpolation=cv2.INTER_CUBIC)
+            i = cv2.cvtColor(i, cv2.COLOR_RGB2GRAY)
+            i = cv2.bitwise_not(i)
+            cv2.imwrite(f"test{idx}.jpg", i)
+
     else:
-        mission_coords = (screen_width*0.62, screen_height*0.25, screen_width*0.9, screen_height*0.70)
-        screenshot = ImageGrab.grab(mission_coords)
-        screenshot = np.array(screenshot)
-    screenshot = cv2.resize(screenshot, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
-    screenshot = cv2.cvtColor(screenshot, cv2.COLOR_RGB2GRAY)
-    screenshot = cv2.bitwise_not(screenshot)
-    text = pytesseract.image_to_string(screenshot,config=custom_config)
+        screenshot = ImageGrab.grab()
+        screenList.append(screenshot.crop(extract_mission_coords))
+        screenList.append(screenshot.crop(auec_coords))
+        screenList.append(screenshot.crop(container_coords))
+    threads = []
+    for i in range(3):
+        thread = threading.Thread(OCR_Results.append(pytesseract.image_to_string(screenList[i],config=custom_config)))
+        threads.append(thread)
+        thread.start()
+    for t in threads:
+        t.join()
+
+    for i in OCR_Results:
+        print(i)
+
+def ExtractMissionInfo():
+    global missionDatabase
+    global custom_config
+    global screenshot
+    global OCR_Results
+
+    text = OCR_Results[0]
     text = text.replace('©', '')
     
     if bDebug:
@@ -693,6 +687,7 @@ def AddMission():
     global currentLocalScreenshot
     if bLocalTest:
         currentLocalScreenshot += 1
+    CreateOcrText()
     ExtractMissionInfo()
     missionDatabase.sortedMissionManager.CheckForMissions()
     missionDatabase.locationDatabase.GenerateDropPickupList(missionDatabase,True)
