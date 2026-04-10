@@ -67,63 +67,14 @@ class LocationCargo:
         self.itemName = itemName
         self.container = []
 
-class CargoDatabaseSplit   :
-    def __init__(self):
-            # The core storage: { "LocationName": { "ItemName": ["Container1", "Container2"] } }
-            self.data = {}
 
-
-    def add_entry(self, location:str, item_name:str, container:int, max_container_size:int):
-        """Adds a container to an item at a specific location."""
-        tmp = split_containers(container, max_container_size)
-        # check if location exists, if not create it
-        if location not in self.data:
-            self.data[location] = {}
-        # check if item exists at location, if not create it
-        if item_name not in self.data[location]:
-            self.data[location][item_name] = []
-        # add the container to the item at the location
-        for i in tmp:
-            self.data[location][item_name].append(i)
-
-
-    def get_containers(self, location):
-        ContainerList = []
-        ContainerList.clear()
-        for i in self.data[location]:
-            print(i)
-            self.data[location][i]
-            tempCargo = []
-            for j in self.data[location][i]:
-                tempCargo.append(j)
-            data = Counter(tempCargo)
-            print(data)
-            sorted_output = sorted(data.items(), key=lambda x: x[0], reverse=True)
-            for k in sorted_output:
-                ContainerList.append((i,k[0],k[1]))
-            
-        print(ContainerList)
-        return ContainerList
-        
-
-    def __str__(self):
-        """Returns a readable string version of the database."""
-        return str(self.data)
-    
-    def getInfo(self):
-        for i in self.data:
-            print(f"Location: {i}")
-            for j in self.data[i]:
-                print(f"  Item: {j}")
-                print(Counter(self.data[i][j]))
 
 def sortByCounter(cargolist:list):
     tmp = Counter(cargolist)
     sorted_list = sorted(tmp.items(), key=lambda x: x[0], reverse=True)
     return sorted_list
 
-PickUpDatabase = CargoDatabaseSplit()
-DeliverDatabase = CargoDatabaseSplit()
+
 
 def fix_location(raw: str, threshold: int = 90) -> str:
     """
@@ -146,9 +97,7 @@ def fix_location(raw: str, threshold: int = 90) -> str:
     
     for k in ocr_string_fixes:
         if k in raw:
-            print(k)
             raw = raw.replace(k, ocr_string_fixes[k])
-            print(raw)
 
     return raw  # no  match keep original
 
@@ -163,6 +112,64 @@ if not os.path.exists(os.path.join(script_dir, 'tesseract.exe')):
 app = Flask(__name__)
 
 class LocationDatabase:
+    class CargoDatabaseSplit:
+        def __init__(self):
+                # The core storage: { "LocationName": { "ItemName": ["Container1", "Container2"] } }
+            self.data = {}
+
+        def clear(self):
+            self.data = {}
+
+
+        def add_entry(self, location:str, item_name:str, container:int, max_container_size:int):
+            """Adds a container to an item at a specific location."""
+            tmp = split_containers(container, max_container_size)
+            # check if location exists, if not create it
+            if location not in self.data:
+                self.data[location] = {}
+            # check if item exists at location, if not create it
+            if item_name not in self.data[location]:
+                self.data[location][item_name] = []
+            # add the container to the item at the location
+            for i in tmp:
+                self.data[location][item_name].append(i)
+
+
+        def get_containers(self, location):
+            ContainerList = []
+            ContainerList.clear()
+            for i in self.data[location]:
+                self.data[location][i]
+                tempCargo = []
+                for j in self.data[location][i]:
+                    tempCargo.append(j)
+                data = Counter(tempCargo)
+                sorted_output = sorted(data.items(), key=lambda x: x[0], reverse=True)
+                for k in sorted_output:
+                    ContainerList.append((i,k[0],k[1]))
+                
+            return ContainerList
+        
+
+        def __str__(self):
+            """Returns a readable string version of the database."""
+            return str(self.data)
+        
+        def getInfo(self):
+            for i in self.data:
+                print(f"Location: {i}")
+                for j in self.data[i]:
+                    print(f"  Item: {j}")
+                    print(Counter(self.data[i][j]))
+
+        def getLength(self, location):
+            length = 0
+
+            if location in self.data:
+                for i in self.data[location]:
+                    length += len(self.data[location][i]) 
+            return length
+
     class Cargo:
         def __init__(self):
             self.itemName = ""
@@ -184,6 +191,8 @@ class LocationDatabase:
         self.dropLocations = []
         self.pickupLocations = []
         self.locationList = []
+        self.PickUpDatabase = self.CargoDatabaseSplit()
+        self.DeliverDatabase = self.CargoDatabaseSplit()
 
     def AddPickupLocation(self, PickupLocation:str, Cargo: Cargo):
         bPickupLocationFound = False
@@ -266,15 +275,31 @@ class LocationDatabase:
         
 
     def GetPickupList(self,location:str):
+        self.PickUpDatabase.clear()
         for i in self.pickupLocations:
             if i.name == location:
-                return i.cargo
+                result = i.cargo
+                for k in result:
+                    self.PickUpDatabase.add_entry(location=location, item_name=k.itemName, container=k.SCUs, max_container_size=missionDatabase.GetMaxContainerSizebyUuid(k.missionUUID))
+        try:
+            temp = self.PickUpDatabase.get_containers(location)
+        except:
+            return []
+        return temp
+
             
     def GetDropList(self,location:str):
+        self.DeliverDatabase.clear()
         for i in self.dropLocations:
             if i.name == location:
-                return i.cargo
-            
+                result = i.cargo
+                for k in result:
+                    self.DeliverDatabase.add_entry(location=location, item_name=k.itemName, container=k.SCUs, max_container_size=missionDatabase.GetMaxContainerSizebyUuid(k.missionUUID))
+        try:
+            temp = self.DeliverDatabase.get_containers(location)
+        except:
+            return []
+        return temp
 
     def GetCargoTab3(self,location:str):
         global missionDatabase
@@ -282,53 +307,33 @@ class LocationDatabase:
         dropCargo = self.GetDropList(location)
         template = ["","","",""]
         listenarray :list = []
-        NewMaxPickupLength = 0
-        newPickupList = []
-        newDropList = []
-        NewCargoPickup = []
 
-        if pickupCargo:
-            NewCargoPickup.clear()
-            for i in pickupCargo:
-                PickUpDatabase.add_entry(location=location, item_name=i.itemName, container=i.SCUs, max_container_size=missionDatabase.GetMaxContainerSizebyUuid(i.missionUUID))
-            for i in PickUpDatabase.data[location]:
-                NewMaxPickupLength += len(PickUpDatabase.data[location][i])   
-            NewCargoPickup = PickUpDatabase.get_containers(location)
-            
-            print(len(NewCargoPickup))
-            
 
-        if dropCargo:
-            newDropList.clear()
-            for i in dropCargo:
-                DeliverDatabase.add_entry(location=location, item_name=i.itemName, container=i.SCUs, max_container_size=missionDatabase.GetMaxContainerSizebyUuid(i.missionUUID))
-        
-            newDropList = DeliverDatabase.get_containers(location)
-            print(len(newDropList))
-
-        pickupCargoLength = len(NewCargoPickup) if NewCargoPickup else 0
-        dropCargoLength = len(newDropList) if newDropList else 0
+        pickupCargoLength = self.PickUpDatabase.getLength(location)
+        dropCargoLength = self.DeliverDatabase.getLength(location)
         maxLength = max(pickupCargoLength, dropCargoLength)
 
         for i in range(maxLength):
             try:
                 if i < pickupCargoLength:
-                    template[0] = f"{NewCargoPickup[i][2]}x {NewCargoPickup[i][1]}scu - " 
-                    template[1] = f"{NewCargoPickup[i][0]}" 
+                    template[0] = f"{pickupCargo[i][2]}x {pickupCargo[i][1]}scu - " 
+                    template[1] = f"{pickupCargo[i][0]}" 
                 else:
                     template[0] = ""
                     template[1] = ""
             except:
-                ...
+                    template[0] = ""
+                    template[1] = ""
             try:
                 if i < dropCargoLength:
-                    template[2] = f"{newDropList[i][2]}x {newDropList[i][1]}scu - "  
-                    template[3] = f"{newDropList[i][0]}" 
+                    template[2] = f"{dropCargo[i][2]}x {dropCargo[i][1]}scu - "  
+                    template[3] = f"{dropCargo[i][0]}" 
                 else:
                     template[2] = ""
                     template[3] = ""
             except:
-                ...
+                    template[0] = ""
+                    template[1] = ""
             listenarray.append(template)
             template = ["","","",""]
         return listenarray
@@ -705,7 +710,6 @@ def update_order():
     if bDebug:
         print("Neue Sortierung:", new_order)
     missionDatabase.locationDatabase.ReorderLocationList(new_order)
-    print("hello world")
     return render_template('route.html', missionDatabase=missionDatabase)
 
 @app.route('/route', methods=['GET'])
