@@ -15,7 +15,7 @@ from collections import Counter
 ####config
 bDebug = False
 bTestMissions = False
-bLocalTest = False
+bLocalTest = True
 currentLocalScreenshot = 0
 
 #get screen resolution
@@ -34,12 +34,96 @@ if bDebug:
 
 else:
     ocr_string_fixes = json.loads(requests.get("https://github.com/KenshiHH/SC_HaulingHelper/raw/refs/heads/main/ocrfixes.json").text)
-    known_locations = json.loads(requests.get("https://github.com/KenshiHH/SC_HaulingHelper/raw/refs/heads/main/known_locations.json").text)
+    known_locations = json.loads(requests.get("https://raw.githubusercontent.com/KenshiHH/SC_HaulingHelper/refs/heads/main/known_locations.json").text)
 
 #ocr config
 blacklist_chars = '!@#$%^&*()_+-=[]{}|;\'"<>?~`\\¬¦'
 game_icons = '◇◆□■○●'
 custom_config = f'--oem 3 --psm 6 -c tessedit_char_blacklist={blacklist_chars}{game_icons}'
+
+
+def split_containers(cargosize: int, max_size: int) -> list[int]:
+    container_sizes = [32, 16, 8, 4, 2, 1]
+    """
+    Packs `num_items` unit-sized items into available containers <= `max_size`.
+    
+    Returns list of used container sizes (e.g., [8, 2, 1] for 11 items, max 8).
+    """
+    remaining = cargosize
+    used = []
+    available = [s for s in container_sizes if s <= max_size]
+    available.sort(reverse=True)
+    
+    for size in available:
+        while remaining >= size:
+            used.append(size)
+            remaining -= size
+        if remaining == 0:
+            break    
+    return used
+
+class LocationCargo:
+    def __init__(self,itemName:str):
+        self.itemName = itemName
+        self.container = []
+
+class CargoDatabaseSplit   :
+    def __init__(self):
+            # The core storage: { "LocationName": { "ItemName": ["Container1", "Container2"] } }
+            self.data = {}
+
+
+    def add_entry(self, location:str, item_name:str, container:int, max_container_size:int):
+        """Adds a container to an item at a specific location."""
+        tmp = split_containers(container, max_container_size)
+        # check if location exists, if not create it
+        if location not in self.data:
+            self.data[location] = {}
+        # check if item exists at location, if not create it
+        if item_name not in self.data[location]:
+            self.data[location][item_name] = []
+        # add the container to the item at the location
+        for i in tmp:
+            self.data[location][item_name].append(i)
+
+
+    def get_containers(self, location):
+        ContainerList = []
+        ContainerList.clear()
+        for i in self.data[location]:
+            print(i)
+            self.data[location][i]
+            tempCargo = []
+            for j in self.data[location][i]:
+                tempCargo.append(j)
+            data = Counter(tempCargo)
+            print(data)
+            sorted_output = sorted(data.items(), key=lambda x: x[0], reverse=True)
+            for k in sorted_output:
+                ContainerList.append((i,k[0],k[1]))
+            
+        print(ContainerList)
+        return ContainerList
+        
+
+    def __str__(self):
+        """Returns a readable string version of the database."""
+        return str(self.data)
+    
+    def getInfo(self):
+        for i in self.data:
+            print(f"Location: {i}")
+            for j in self.data[i]:
+                print(f"  Item: {j}")
+                print(Counter(self.data[i][j]))
+
+def sortByCounter(cargolist:list):
+    tmp = Counter(cargolist)
+    sorted_list = sorted(tmp.items(), key=lambda x: x[0], reverse=True)
+    return sorted_list
+
+PickUpDatabase = CargoDatabaseSplit()
+DeliverDatabase = CargoDatabaseSplit()
 
 def fix_location(raw: str, threshold: int = 90) -> str:
     """
@@ -62,7 +146,9 @@ def fix_location(raw: str, threshold: int = 90) -> str:
     
     for k in ocr_string_fixes:
         if k in raw:
+            print(k)
             raw = raw.replace(k, ocr_string_fixes[k])
+            print(raw)
 
     return raw  # no  match keep original
 
@@ -84,6 +170,7 @@ class LocationDatabase:
             self.missionUUID = 0
             self.pickedUp = False
             self.droppedOff = False
+            self.cargoList = []
     class DropLocation:
         def __init__(self):
             self.name = ""
@@ -176,6 +263,7 @@ class LocationDatabase:
                     cargo.missionUUID = i.uuid
                     missionDatabase.locationDatabase.AddDropLocation(k['DropLocation'], cargo)
                     self.GenerateLocationList(k['DropLocation'])
+        
 
     def GetPickupList(self,location:str):
         for i in self.pickupLocations:
@@ -189,20 +277,44 @@ class LocationDatabase:
             
 
     def GetCargoTab3(self,location:str):
+        global missionDatabase
         pickupCargo = self.GetPickupList(location)
         dropCargo = self.GetDropList(location)
         template = ["","","",""]
         listenarray :list = []
+        NewMaxPickupLength = 0
+        newPickupList = []
+        newDropList = []
+        NewCargoPickup = []
 
-        pickupCargoLength = len(pickupCargo) if pickupCargo else 0
-        dropCargoLength = len(dropCargo) if dropCargo else 0
+        if pickupCargo:
+            NewCargoPickup.clear()
+            for i in pickupCargo:
+                PickUpDatabase.add_entry(location=location, item_name=i.itemName, container=i.SCUs, max_container_size=missionDatabase.GetMaxContainerSizebyUuid(i.missionUUID))
+            for i in PickUpDatabase.data[location]:
+                NewMaxPickupLength += len(PickUpDatabase.data[location][i])   
+            NewCargoPickup = PickUpDatabase.get_containers(location)
+            
+            print(len(NewCargoPickup))
+            
+
+        if dropCargo:
+            newDropList.clear()
+            for i in dropCargo:
+                DeliverDatabase.add_entry(location=location, item_name=i.itemName, container=i.SCUs, max_container_size=missionDatabase.GetMaxContainerSizebyUuid(i.missionUUID))
+        
+            newDropList = DeliverDatabase.get_containers(location)
+            print(len(newDropList))
+
+        pickupCargoLength = len(NewCargoPickup) if NewCargoPickup else 0
+        dropCargoLength = len(newDropList) if newDropList else 0
         maxLength = max(pickupCargoLength, dropCargoLength)
 
         for i in range(maxLength):
             try:
                 if i < pickupCargoLength:
-                    template[0] = f"{pickupCargo[i].SCUs}x" 
-                    template[1] = f"{pickupCargo[i].itemName}" 
+                    template[0] = f"{NewCargoPickup[i][2]}x {NewCargoPickup[i][1]}scu - " 
+                    template[1] = f"{NewCargoPickup[i][0]}" 
                 else:
                     template[0] = ""
                     template[1] = ""
@@ -210,8 +322,8 @@ class LocationDatabase:
                 ...
             try:
                 if i < dropCargoLength:
-                    template[2] = f"{dropCargo[i].SCUs}x"  
-                    template[3] = f"{dropCargo[i].itemName}"
+                    template[2] = f"{newDropList[i][2]}x {newDropList[i][1]}scu - "  
+                    template[3] = f"{newDropList[i][0]}" 
                 else:
                     template[2] = ""
                     template[3] = ""
@@ -219,7 +331,6 @@ class LocationDatabase:
                 ...
             listenarray.append(template)
             template = ["","","",""]
-            
         return listenarray
     
     def ToggleLocationStatus(self,location: str):
@@ -296,6 +407,7 @@ class MainMission:
         self.sortedID = 0
         self.auec = 0
         self.uuid = uuid.uuid4()
+        self.maxContainerSize = 0
 
     def AddSubMission(self, subMission: SubMission):
         self.subMissions.append(subMission)
@@ -317,11 +429,18 @@ class MissionDatabase:
         self.auec = 0
         self.locationDatabase = LocationDatabase()
 
+    def GetMaxContainerSizebyUuid(self,uuid):
+        for mission in self.mainMissions:
+            if mission.uuid == uuid:
+                return mission.maxContainerSize
+        return 0
+
     def AddMainMission(self, mainMission: MainMission):
         self.mainMissions.append(mainMission)
         self.UpdateMissionIDs()
         self.UpdateCargoSCU()
         self.UpdateAUEC()
+        print(f"max container size: {mainMission.maxContainerSize}")
 
     def UpdateMissionIDs(self):
         for i in self.mainMissions:
@@ -416,8 +535,38 @@ def ExtractReward():
 
     return reward
 
+def ExtractMaxContainerSize():
+    global custom_config
+    num = 0
+    if bLocalTest:
+        global currentLocalScreenshot
+        y1 = int(screen_height * 0.26)
+        y2 = int(screen_height * 0.76)
+        x1 = int(screen_width * 0.34)
+        x2 = int(screen_width * 0.62)
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        image_path = os.path.join(script_dir, '4_7', f'test_{currentLocalScreenshot}.png')
+        screenshot = cv2.imread(image_path)
+        screenshot = screenshot[y1:y2, x1:x2]
+    else:
+        container_coords = (screen_width*0.34, screen_height*0.26, screen_width*0.62, screen_height*0.76)
+        screenshot = ImageGrab.grab(container_coords)
+        screenshot = np.array(screenshot)
+    screenshot = cv2.resize(screenshot, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+    screenshot = cv2.cvtColor(screenshot, cv2.COLOR_RGB2GRAY)
+    screenshot = cv2.bitwise_not(screenshot)
+    cv2.imwrite('test.jpg', screenshot)
+    text = pytesseract.image_to_string(screenshot,config=custom_config)
+    text = text.replace('©', '')
+    text = text.replace('\n', '')
+    text = text.rsplit('SCU', 1)[0]
+    text = text[-4:].strip()
+    num = re.search(r'\d+', text).group(0) if text else None
+    return int(num)
+
 def ExtractMissionInfo():
     global missionDatabase
+    global custom_config
 
     if bLocalTest:
         global currentLocalScreenshot
@@ -437,6 +586,7 @@ def ExtractMissionInfo():
     screenshot = cv2.cvtColor(screenshot, cv2.COLOR_RGB2GRAY)
     screenshot = cv2.bitwise_not(screenshot)
     text = pytesseract.image_to_string(screenshot,config=custom_config)
+    text = text.replace('©', '')
     
     if bDebug:
         print("OCR Text:")
@@ -450,7 +600,6 @@ def ExtractMissionInfo():
     ocrArray = re.split(r'(?=Deliver)', text)
     ocrArray = [p.strip() for p in ocrArray if p.strip()]
 
-
     newMission = MainMission()
 
     try:
@@ -459,7 +608,7 @@ def ExtractMissionInfo():
             PATTERN = re.compile(
                 r'Deliver \d+/(?P<scu>\d+) SCU of (?P<cargo>[\w\s]+?) to (?P<deliver_target>.+?)\.'
                 r'.*?'
-                r'Collect \w+ from (?P<collect_from>.+?)(?:\.|$)',
+                r'Collect [\w\s]+? from (?P<collect_from>.+?)(?:\.|$)',
                 re.DOTALL
             )
             m = PATTERN.search(i)
@@ -471,11 +620,6 @@ def ExtractMissionInfo():
             
             target = fix_location(target)
             pickup = fix_location(pickup)
-            for k in ocr_string_fixes:
-                if k in target:
-                    target = target.replace(k, ocr_string_fixes[k])
-                if k in pickup:
-                    pickup = pickup.replace(k, ocr_string_fixes[k])
             if bDebug:
                 print(f"Extracted: \n{scu} SCU \n{cargo} \nto {target}\ncollect from {pickup}")
             newSubMission.scu += int(scu)
@@ -483,6 +627,7 @@ def ExtractMissionInfo():
             newSubMission.AddDropLocation(cargo,int(scu), target)
             newMission.AddSubMission(newSubMission)
             newMission.auec = ExtractReward()
+        newMission.maxContainerSize = ExtractMaxContainerSize()
         missionDatabase.AddMainMission(newMission)
             
     except Exception as error:
@@ -560,6 +705,7 @@ def update_order():
     if bDebug:
         print("Neue Sortierung:", new_order)
     missionDatabase.locationDatabase.ReorderLocationList(new_order)
+    print("hello world")
     return render_template('route.html', missionDatabase=missionDatabase)
 
 @app.route('/route', methods=['GET'])
