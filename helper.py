@@ -11,6 +11,7 @@ from rapidfuzz import process, fuzz
 import cv2
 import numpy as np
 from collections import Counter
+import threading
 
 ####config
 bDebug = False
@@ -34,12 +35,47 @@ if bDebug:
 
 else:
     ocr_string_fixes = json.loads(requests.get("https://github.com/KenshiHH/SC_HaulingHelper/raw/refs/heads/main/ocrfixes.json").text)
-    known_locations = json.loads(requests.get("https://github.com/KenshiHH/SC_HaulingHelper/raw/refs/heads/main/known_locations.json").text)
+    known_locations = json.loads(requests.get("https://raw.githubusercontent.com/KenshiHH/SC_HaulingHelper/refs/heads/main/known_locations.json").text)
 
-#ocr config
-blacklist_chars = '!@#$%^&*()_+-=[]{}|;\'"<>?~`\\¬¦'
-game_icons = '◇◆□■○●'
-custom_config = f'--oem 3 --psm 6 -c tessedit_char_blacklist={blacklist_chars}{game_icons}'
+
+
+screenshot = None
+OCR_Results = []
+
+
+def split_containers(cargosize: int, max_size: int) -> list[int]:
+    container_sizes = [32, 24, 16, 8, 4, 2, 1]
+    """
+    Packs `num_items` unit-sized items into available containers <= `max_size`.
+    
+    Returns list of used container sizes (e.g., [8, 2, 1] for 11 items, max 8).
+    """
+    remaining = cargosize
+    used = []
+    available = [s for s in container_sizes if s <= max_size]
+    available.sort(reverse=True)
+    
+    for size in available:
+        while remaining >= size:
+            used.append(size)
+            remaining -= size
+        if remaining == 0:
+            break    
+    return used
+
+class LocationCargo:
+    def __init__(self,itemName:str):
+        self.itemName = itemName
+        self.container = []
+
+
+
+def sortByCounter(cargolist:list):
+    tmp = Counter(cargolist)
+    sorted_list = sorted(tmp.items(), key=lambda x: x[0], reverse=True)
+    return sorted_list
+
+
 
 def fix_location(raw: str, threshold: int = 90) -> str:
     """
@@ -77,6 +113,62 @@ if not os.path.exists(os.path.join(script_dir, 'tesseract.exe')):
 app = Flask(__name__)
 
 class LocationDatabase:
+    class CargoDatabaseSplit:
+        def __init__(self):
+                # The core storage: { "LocationName": { "ItemName": ["Container1", "Container2"] } }
+            self.data = {}
+
+        def clear(self):
+            self.data = {}
+
+
+        def add_entry(self, location:str, item_name:str, container:int, max_container_size:int):
+            """Adds a container to an item at a specific location."""
+            tmp = split_containers(container, max_container_size)
+            # check if location exists, if not create it
+            if location not in self.data:
+                self.data[location] = {}
+            # check if item exists at location, if not create it
+            if item_name not in self.data[location]:
+                self.data[location][item_name] = []
+            # add the container to the item at the location
+            for i in tmp:
+                self.data[location][item_name].append(i)
+
+
+        def get_containers(self, location):
+            ContainerList = []
+            ContainerList.clear()
+            for i in self.data[location]:
+                self.data[location][i]
+                tempCargo = []
+                for j in self.data[location][i]:
+                    tempCargo.append(j)
+                data = Counter(tempCargo)
+                sorted_output = sorted(data.items(), key=lambda x: x[0], reverse=True)
+                for k in sorted_output:
+                    ContainerList.append((i,k[0],k[1]))
+                
+            return ContainerList
+        
+
+        def __str__(self):
+            """Returns a readable string version of the database."""
+            return str(self.data)
+        
+        def getInfo(self):
+            for i in self.data:
+                print(f"Location: {i}")
+                for j in self.data[i]:
+                    print(f"  Item: {j}")
+                    print(Counter(self.data[i][j]))
+
+        def getLength(self, location):
+            length = 0
+            if location in self.data:
+                return(len(self.data[location])) # get_containers 
+            return length
+
     class Cargo:
         def __init__(self):
             self.itemName = ""
@@ -84,6 +176,7 @@ class LocationDatabase:
             self.missionUUID = 0
             self.pickedUp = False
             self.droppedOff = False
+            self.cargoList = []
     class DropLocation:
         def __init__(self):
             self.name = ""
@@ -97,6 +190,8 @@ class LocationDatabase:
         self.dropLocations = []
         self.pickupLocations = []
         self.locationList = []
+        self.PickUpDatabase = self.CargoDatabaseSplit()
+        self.DeliverDatabase = self.CargoDatabaseSplit()
 
     def AddPickupLocation(self, PickupLocation:str, Cargo: Cargo):
         bPickupLocationFound = False
@@ -178,48 +273,64 @@ class LocationDatabase:
                     self.GenerateLocationList(k['DropLocation'])
 
     def GetPickupList(self,location:str):
+        self.PickUpDatabase.clear()
         for i in self.pickupLocations:
             if i.name == location:
-                return i.cargo
+                result = i.cargo
+                for k in result:
+                    self.PickUpDatabase.add_entry(location=location, item_name=k.itemName, container=k.SCUs, max_container_size=missionDatabase.GetMaxContainerSizebyUuid(k.missionUUID))
+        try:
+            temp = self.PickUpDatabase.get_containers(location)
+        except:
+            return []
+        return temp
+
             
     def GetDropList(self,location:str):
+        self.DeliverDatabase.clear()
         for i in self.dropLocations:
             if i.name == location:
-                return i.cargo
-            
+                result = i.cargo
+                for k in result:
+                    self.DeliverDatabase.add_entry(location=location, item_name=k.itemName, container=k.SCUs, max_container_size=missionDatabase.GetMaxContainerSizebyUuid(k.missionUUID))
+        try:
+            temp = self.DeliverDatabase.get_containers(location)
+        except:
+            return []
+        return temp
 
     def GetCargoTab3(self,location:str):
+        global missionDatabase
         pickupCargo = self.GetPickupList(location)
         dropCargo = self.GetDropList(location)
         template = ["","","",""]
         listenarray :list = []
 
-        pickupCargoLength = len(pickupCargo) if pickupCargo else 0
-        dropCargoLength = len(dropCargo) if dropCargo else 0
-        maxLength = max(pickupCargoLength, dropCargoLength)
+        maxLength = max(len(pickupCargo), len(dropCargo))
 
         for i in range(maxLength):
             try:
-                if i < pickupCargoLength:
-                    template[0] = f"{pickupCargo[i].SCUs}x" 
-                    template[1] = f"{pickupCargo[i].itemName}" 
+                if i < len(pickupCargo):
+                    template[0] = f"{pickupCargo[i][2]}x {pickupCargo[i][1]}scu - " 
+                    template[1] = f"{pickupCargo[i][0]}" 
                 else:
                     template[0] = ""
                     template[1] = ""
             except:
-                ...
+                    template[0] = ""
+                    template[1] = ""
             try:
-                if i < dropCargoLength:
-                    template[2] = f"{dropCargo[i].SCUs}x"  
-                    template[3] = f"{dropCargo[i].itemName}"
+                if i < len(dropCargo):
+                    template[2] = f"{dropCargo[i][2]}x {dropCargo[i][1]}scu - "  
+                    template[3] = f"{dropCargo[i][0]}" 
                 else:
                     template[2] = ""
                     template[3] = ""
             except:
-                ...
+                    template[0] = ""
+                    template[1] = ""
             listenarray.append(template)
             template = ["","","",""]
-            
         return listenarray
     
     def ToggleLocationStatus(self,location: str):
@@ -296,6 +407,7 @@ class MainMission:
         self.sortedID = 0
         self.auec = 0
         self.uuid = uuid.uuid4()
+        self.maxContainerSize = 0
 
     def AddSubMission(self, subMission: SubMission):
         self.subMissions.append(subMission)
@@ -317,11 +429,18 @@ class MissionDatabase:
         self.auec = 0
         self.locationDatabase = LocationDatabase()
 
+    def GetMaxContainerSizebyUuid(self,uuid):
+        for mission in self.mainMissions:
+            if mission.uuid == uuid:
+                return mission.maxContainerSize
+        return 0
+
     def AddMainMission(self, mainMission: MainMission):
         self.mainMissions.append(mainMission)
         self.UpdateMissionIDs()
         self.UpdateCargoSCU()
         self.UpdateAUEC()
+        print(f"max container size: {mainMission.maxContainerSize}")
 
     def UpdateMissionIDs(self):
         for i in self.mainMissions:
@@ -379,31 +498,15 @@ missionDatabase = MissionDatabase()
 
 def ExtractReward():
     reward = 0
+    global screenshot
+    global OCR_Results
     
-    if bLocalTest:
-        global currentLocalScreenshot
-        y1 = int(screen_height * 0.01)
-        y2 = int(screen_height * 0.26)
-        x1 = int(screen_width * 0.66)
-        x2 = int(screen_width * 0.95)
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        image_path = os.path.join(script_dir, '4_7', f'test_{currentLocalScreenshot}.png')
-        screenshot_auec = cv2.imread(image_path)
-        screenshot_auec = screenshot_auec[y1:y2, x1:x2]
-    else:
-        auec_coords = (screen_width*0.66, screen_height*0.1, screen_width*0.95, screen_height*0.26)
-        screenshot_auec = ImageGrab.grab(auec_coords)
-        screenshot_auec = np.array(screenshot_auec)
-    screenshot_auec = cv2.resize(screenshot_auec, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
-    screenshot_auec = cv2.cvtColor(screenshot_auec, cv2.COLOR_RGB2GRAY)
-    screenshot_auec = cv2.bitwise_not(screenshot_auec)
-
-    text = pytesseract.image_to_string(screenshot_auec,config=custom_config)
+    text = OCR_Results[1]
     if bDebug:
         print(text)
     text = text.split('\n')
-    
 
+    print(text)
     try:
         for i in text:
             if "reward" in i.lower():
@@ -416,27 +519,81 @@ def ExtractReward():
 
     return reward
 
-def ExtractMissionInfo():
-    global missionDatabase
+def ExtractMaxContainerSize():
+    global custom_config
+    global screenshot
+    global OCR_Results
+    num = 0    
+    #cv2.imwrite('test.jpg', screenshot_containerInfo)
+    #text = pytesseract.image_to_string(screenshot_containerInfo,config=custom_config)
+    text = OCR_Results[2]
+    text = text.replace('©', '')
+    text = text.replace('\n', '')
+    text = text.rsplit('SCU', 1)[0]
+    text = text[-4:].strip()
+    num = re.search(r'\d+', text).group(0) if text else None
+    return int(num)
+
+def CreateOcrText():
+    global OCR_Results
+
+    #ocr config
+    blacklist_chars = '!@#$%^&*()_+-=[]{}|;\'"<>?~`\\¬¦'
+    game_icons = '◇◆□■○●'
+    custom_config = f'--oem 3 --psm 6 -c tessedit_char_blacklist={blacklist_chars}{game_icons}'
+
+    OCR_Results.clear()
+    extract_mission_coords = (screen_width*0.62, screen_height*0.25, screen_width*0.9, screen_height*0.70)
+    auec_coords = (screen_width*0.66, screen_height*0.1, screen_width*0.95, screen_height*0.26)
+    container_coords = (screen_width*0.34, screen_height*0.26, screen_width*0.62, screen_height*0.76)
+    screenList = []
 
     if bLocalTest:
-        global currentLocalScreenshot
-        y1 = int(screen_height * 0.25)
-        y2 = int(screen_height * 0.7)
-        x1 = int(screen_width * 0.62)
-        x2 = int(screen_width * 0.9)
         script_dir = os.path.dirname(os.path.abspath(__file__))
         image_path = os.path.join(script_dir, '4_7', f'test_{currentLocalScreenshot}.png')
         screenshot = cv2.imread(image_path)
-        screenshot = screenshot[y1:y2, x1:x2]
+        screenList.append(screenshot[int(extract_mission_coords[1]):int(extract_mission_coords[3]), int(extract_mission_coords[0]):int(extract_mission_coords[2])])
+        screenList.append(screenshot[int(auec_coords[1]):int(auec_coords[3]), int(auec_coords[0]):int(auec_coords[2])])
+        screenList.append(screenshot[int(container_coords[1]):int(container_coords[3]), int(container_coords[0]):int(container_coords[2])])
+    
+        for idx, i in enumerate(screenList):
+            i = cv2.resize(i, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+            i = cv2.cvtColor(i, cv2.COLOR_RGB2GRAY)
+            if idx == 1:
+                i = cv2.threshold(i, 110, 255, cv2.THRESH_BINARY)[1]
+            i = cv2.bitwise_not(i)
+            screenList[idx] = i
+            cv2.imwrite(f"test{idx}.jpg", i)
+
     else:
-        mission_coords = (screen_width*0.62, screen_height*0.25, screen_width*0.9, screen_height*0.70)
-        screenshot = ImageGrab.grab(mission_coords)
+        screenshot = ImageGrab.grab()
         screenshot = np.array(screenshot)
-    screenshot = cv2.resize(screenshot, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
-    screenshot = cv2.cvtColor(screenshot, cv2.COLOR_RGB2GRAY)
-    screenshot = cv2.bitwise_not(screenshot)
-    text = pytesseract.image_to_string(screenshot,config=custom_config)
+        screenList.append(screenshot[int(extract_mission_coords[1]):int(extract_mission_coords[3]), int(extract_mission_coords[0]):int(extract_mission_coords[2])])
+        screenList.append(screenshot[int(auec_coords[1]):int(auec_coords[3]), int(auec_coords[0]):int(auec_coords[2])])
+        screenList.append(screenshot[int(container_coords[1]):int(container_coords[3]), int(container_coords[0]):int(container_coords[2])])
+        for idx, i in enumerate(screenList):
+            i = cv2.resize(i, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+            i = cv2.cvtColor(i, cv2.COLOR_RGB2GRAY)
+            if idx == 1:
+                i = cv2.threshold(i, 110, 255, cv2.THRESH_BINARY)[1]
+            i = cv2.bitwise_not(i)
+            screenList[idx] = i
+    threads = []
+    for i in range(3):
+        thread = threading.Thread(OCR_Results.append(pytesseract.image_to_string(screenList[i],config=custom_config)))
+        threads.append(thread)
+        thread.start()
+    for t in threads:
+        t.join()
+
+def ExtractMissionInfo():
+    global missionDatabase
+    global custom_config
+    global screenshot
+    global OCR_Results
+
+    text = OCR_Results[0]
+    text = text.replace('©', '')
     
     if bDebug:
         print("OCR Text:")
@@ -450,7 +607,6 @@ def ExtractMissionInfo():
     ocrArray = re.split(r'(?=Deliver)', text)
     ocrArray = [p.strip() for p in ocrArray if p.strip()]
 
-
     newMission = MainMission()
 
     try:
@@ -459,7 +615,7 @@ def ExtractMissionInfo():
             PATTERN = re.compile(
                 r'Deliver \d+/(?P<scu>\d+) SCU of (?P<cargo>[\w\s]+?) to (?P<deliver_target>.+?)\.'
                 r'.*?'
-                r'Collect \w+ from (?P<collect_from>.+?)(?:\.|$)',
+                r'Collect [\w\s]+? from (?P<collect_from>.+?)(?:\.|$)',
                 re.DOTALL
             )
             m = PATTERN.search(i)
@@ -471,11 +627,6 @@ def ExtractMissionInfo():
             
             target = fix_location(target)
             pickup = fix_location(pickup)
-            for k in ocr_string_fixes:
-                if k in target:
-                    target = target.replace(k, ocr_string_fixes[k])
-                if k in pickup:
-                    pickup = pickup.replace(k, ocr_string_fixes[k])
             if bDebug:
                 print(f"Extracted: \n{scu} SCU \n{cargo} \nto {target}\ncollect from {pickup}")
             newSubMission.scu += int(scu)
@@ -483,6 +634,7 @@ def ExtractMissionInfo():
             newSubMission.AddDropLocation(cargo,int(scu), target)
             newMission.AddSubMission(newSubMission)
             newMission.auec = ExtractReward()
+        newMission.maxContainerSize = ExtractMaxContainerSize()
         missionDatabase.AddMainMission(newMission)
             
     except Exception as error:
@@ -543,6 +695,7 @@ def AddMission():
     global currentLocalScreenshot
     if bLocalTest:
         currentLocalScreenshot += 1
+    CreateOcrText()
     ExtractMissionInfo()
     missionDatabase.sortedMissionManager.CheckForMissions()
     missionDatabase.locationDatabase.GenerateDropPickupList(missionDatabase,True)
