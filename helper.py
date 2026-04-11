@@ -16,7 +16,7 @@ import threading
 ####config
 bDebug = False
 bTestMissions = False
-bLocalTest = True
+bLocalTest = False
 currentLocalScreenshot = 0
 
 #get screen resolution
@@ -44,7 +44,7 @@ OCR_Results = []
 
 
 def split_containers(cargosize: int, max_size: int) -> list[int]:
-    container_sizes = [32, 16, 8, 4, 2, 1]
+    container_sizes = [32, 24, 16, 8, 4, 2, 1]
     """
     Packs `num_items` unit-sized items into available containers <= `max_size`.
     
@@ -567,9 +567,10 @@ def CreateOcrText():
 
     else:
         screenshot = ImageGrab.grab()
-        screenList.append(screenshot.crop(extract_mission_coords))
-        screenList.append(screenshot.crop(auec_coords))
-        screenList.append(screenshot.crop(container_coords))
+        screenshot = np.array(screenshot)
+        screenList.append(screenshot[int(extract_mission_coords[1]):int(extract_mission_coords[3]), int(extract_mission_coords[0]):int(extract_mission_coords[2])])
+        screenList.append(screenshot[int(auec_coords[1]):int(auec_coords[3]), int(auec_coords[0]):int(auec_coords[2])])
+        screenList.append(screenshot[int(container_coords[1]):int(container_coords[3]), int(container_coords[0]):int(container_coords[2])])
         for idx, i in enumerate(screenList):
             i = cv2.resize(i, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
             i = cv2.cvtColor(i, cv2.COLOR_RGB2GRAY)
