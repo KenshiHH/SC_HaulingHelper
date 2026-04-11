@@ -16,7 +16,7 @@ import threading
 ####config
 bDebug = False
 bTestMissions = False
-bLocalTest = False
+bLocalTest = True
 currentLocalScreenshot = 0
 
 #get screen resolution
@@ -42,6 +42,7 @@ else:
 screenshot = None
 OCR_Results = []
 
+_ocr_lock = threading.Lock()
 
 def split_containers(cargosize: int, max_size: int) -> list[int]:
     container_sizes = [32, 24, 16, 8, 4, 2, 1]
@@ -520,8 +521,6 @@ def ExtractReward():
     return reward
 
 def ExtractMaxContainerSize():
-    global custom_config
-    global screenshot
     global OCR_Results
     num = 0    
     #cv2.imwrite('test.jpg', screenshot_containerInfo)
@@ -534,57 +533,70 @@ def ExtractMaxContainerSize():
     num = re.search(r'\d+', text).group(0) if text else None
     return int(num)
 
-def CreateOcrText():
-    global OCR_Results
-
-    #ocr config
+def _ocr_worker(image, index: int):
     blacklist_chars = '!@#$%^&*()_+-=[]{}|;\'"<>?~`\\¬¦'
     game_icons = '◇◆□■○●'
     custom_config = f'--oem 3 --psm 6 -c tessedit_char_blacklist={blacklist_chars}{game_icons}'
+    """Run tesseract on one image crop and store result at the correct index."""
+    result = pytesseract.image_to_string(image, config=custom_config)
+    with _ocr_lock:
+        while len(OCR_Results) <= index:
+            OCR_Results.append("")
+        OCR_Results[index] = result
+
+
+def CreateOcrText():
+    global screenshot, OCR_Results
+
+    extract_mission_coords = (
+        screen_width * 0.62, screen_height * 0.25,
+        screen_width * 0.90, screen_height * 0.70,
+    )
+    auec_coords = (
+        screen_width * 0.66, screen_height * 0.10,
+        screen_width * 0.95, screen_height * 0.26,
+    )
+    container_coords = (
+        screen_width * 0.34, screen_height * 0.26,
+        screen_width * 0.62, screen_height * 0.76,
+    )
+    coord_list = [extract_mission_coords, auec_coords, container_coords]
 
     OCR_Results.clear()
-    extract_mission_coords = (screen_width*0.62, screen_height*0.25, screen_width*0.9, screen_height*0.70)
-    auec_coords = (screen_width*0.66, screen_height*0.1, screen_width*0.95, screen_height*0.26)
-    container_coords = (screen_width*0.34, screen_height*0.26, screen_width*0.62, screen_height*0.76)
-    screenList = []
 
     if bLocalTest:
+        global currentLocalScreenshot
         script_dir = os.path.dirname(os.path.abspath(__file__))
         image_path = os.path.join(script_dir, '4_7', f'test_{currentLocalScreenshot}.png')
         screenshot = cv2.imread(image_path)
-        screenList.append(screenshot[int(extract_mission_coords[1]):int(extract_mission_coords[3]), int(extract_mission_coords[0]):int(extract_mission_coords[2])])
-        screenList.append(screenshot[int(auec_coords[1]):int(auec_coords[3]), int(auec_coords[0]):int(auec_coords[2])])
-        screenList.append(screenshot[int(container_coords[1]):int(container_coords[3]), int(container_coords[0]):int(container_coords[2])])
-    
-        for idx, i in enumerate(screenList):
-            i = cv2.resize(i, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
-            i = cv2.cvtColor(i, cv2.COLOR_RGB2GRAY)
-            if idx == 1:
-                i = cv2.threshold(i, 110, 255, cv2.THRESH_BINARY)[1]
-            i = cv2.bitwise_not(i)
-            screenList[idx] = i
-            cv2.imwrite(f"test{idx}.jpg", i)
-
     else:
-        screenshot = ImageGrab.grab()
-        screenshot = np.array(screenshot)
-        screenList.append(screenshot[int(extract_mission_coords[1]):int(extract_mission_coords[3]), int(extract_mission_coords[0]):int(extract_mission_coords[2])])
-        screenList.append(screenshot[int(auec_coords[1]):int(auec_coords[3]), int(auec_coords[0]):int(auec_coords[2])])
-        screenList.append(screenshot[int(container_coords[1]):int(container_coords[3]), int(container_coords[0]):int(container_coords[2])])
-        for idx, i in enumerate(screenList):
-            i = cv2.resize(i, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
-            i = cv2.cvtColor(i, cv2.COLOR_RGB2GRAY)
-            if idx == 1:
-                i = cv2.threshold(i, 110, 255, cv2.THRESH_BINARY)[1]
-            i = cv2.bitwise_not(i)
-            screenList[idx] = i
-    threads = []
-    for i in range(3):
-        thread = threading.Thread(OCR_Results.append(pytesseract.image_to_string(screenList[i],config=custom_config)))
-        threads.append(thread)
-        thread.start()
+        screenshot = np.array(ImageGrab.grab())
+
+    screen_list = []
+    for c in coord_list:
+        crop = screenshot[int(c[1]):int(c[3]), int(c[0]):int(c[2])]
+        screen_list.append(crop)
+
+    processed = []
+    for idx, img in enumerate(screen_list):
+        img = cv2.resize(img, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+        if idx == 1:
+            img = cv2.threshold(img, 110, 255, cv2.THRESH_BINARY)[1]
+        img = cv2.bitwise_not(img)
+        if bLocalTest:
+            cv2.imwrite(f"test{idx}.jpg", img)
+        processed.append(img)
+
+    threads = [
+        threading.Thread(target=_ocr_worker, args=(processed[i], i))
+        for i in range(len(processed))
+    ]
+    for t in threads:
+        t.start()
     for t in threads:
         t.join()
+
 
 def ExtractMissionInfo():
     global missionDatabase
