@@ -14,9 +14,10 @@ from collections import Counter
 import threading
 
 ####config
-bDebug = False
-bTestMissions = False
-bLocalTest = True
+DEBUG = False
+LOCALTEST = False
+
+
 currentLocalScreenshot = 0
 
 #get screen resolution
@@ -27,7 +28,7 @@ screen_height = user32.GetSystemMetrics(1)
 #load json for ocr string fixes
 import requests
 import json
-if bDebug:
+if DEBUG:
     with open('ocrfixes.json') as f:
         ocr_string_fixes = json.load(f)
     with open('known_locations.json') as f:
@@ -503,7 +504,7 @@ def ExtractReward():
     global OCR_Results
     
     text = OCR_Results[1]
-    if bDebug:
+    if DEBUG:
         print(text)
     text = text.split('\n')
 
@@ -564,7 +565,7 @@ def CreateOcrText():
 
     OCR_Results.clear()
 
-    if bLocalTest:
+    if LOCALTEST:
         global currentLocalScreenshot
         script_dir = os.path.dirname(os.path.abspath(__file__))
         image_path = os.path.join(script_dir, '4_7', f'test_{currentLocalScreenshot}.png')
@@ -584,7 +585,7 @@ def CreateOcrText():
         if idx == 1:
             img = cv2.threshold(img, 110, 255, cv2.THRESH_BINARY)[1]
         img = cv2.bitwise_not(img)
-        if bLocalTest:
+        if LOCALTEST:
             cv2.imwrite(f"test{idx}.jpg", img)
         processed.append(img)
 
@@ -607,7 +608,7 @@ def ExtractMissionInfo():
     text = OCR_Results[0]
     text = text.replace('©', '')
     
-    if bDebug:
+    if DEBUG:
         print("OCR Text:")
         print(text)
         print("---END---")
@@ -639,7 +640,7 @@ def ExtractMissionInfo():
             
             target = fix_location(target)
             pickup = fix_location(pickup)
-            if bDebug:
+            if DEBUG:
                 print(f"Extracted: \n{scu} SCU \n{cargo} \nto {target}\ncollect from {pickup}")
             newSubMission.scu += int(scu)
             newSubMission.AddPickupInfo(cargo, pickup)
@@ -652,38 +653,6 @@ def ExtractMissionInfo():
     except Exception as error:
         print("Error extracting mission info")
         print("An exception occurred:", error)
-
-
-
-if bDebug and bTestMissions: # creates test missions
-    newMission = MainMission()
-    newSubMission = SubMission()
-    newSubMission.AddPickupInfo("Stims", "Everus Harbor")
-    newSubMission.AddDropLocation("Stims", 1, "Port Tresser")
-    newSubMission.AddDropLocation("Stims", 12, "Pyro")
-    newMission.AddSubMission(newSubMission)
-    newMission.missionID = 1
-    missionDatabase.AddMainMission(newMission)
-
-    newMission = MainMission()
-    newSubMission = SubMission()
-    newSubMission.AddPickupInfo("Iron Ore", "Earth")
-    newSubMission.AddDropLocation("Iron Ore", 1, "Port Tresser")
-    newSubMission.AddDropLocation("Iron Ore", 12, "Pyro")
-    newMission.AddSubMission(newSubMission)
-    newMission.missionID = 2
-    missionDatabase.AddMainMission(newMission)
-
-    newMission = MainMission()
-    newSubMission = SubMission()
-    newSubMission.AddPickupInfo("Copper", "Pyro")
-    newSubMission.AddDropLocation("Copper", 1, "Mars")
-    newSubMission.AddDropLocation("Copper", 12, "Jupiter")
-    newSubMission.AddDropLocation("Copper", 12, "Pyro")
-    newMission.AddSubMission(newSubMission)
-    newMission.missionID = 3
-    missionDatabase.AddMainMission(newMission)
-
 
 @app.route('/')
 def index():
@@ -705,7 +674,7 @@ def delete(id):
 @app.route('/add/', methods=['POST'])
 def AddMission():
     global currentLocalScreenshot
-    if bLocalTest:
+    if LOCALTEST:
         currentLocalScreenshot += 1
     CreateOcrText()
     ExtractMissionInfo()
@@ -722,7 +691,7 @@ def ToggleLocation(location):
 @app.route('/update-order', methods=['POST'])
 def update_order():
     new_order = request.json.get('order', [])
-    if bDebug:
+    if DEBUG:
         print("Neue Sortierung:", new_order)
     missionDatabase.locationDatabase.ReorderLocationList(new_order)
     return render_template('route.html', missionDatabase=missionDatabase)
