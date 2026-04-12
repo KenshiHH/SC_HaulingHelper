@@ -15,6 +15,8 @@ import numpy as np
 from collections import Counter
 import threading
 import keyboard
+import winsound
+
 
 
 _sse_queue = Queue()
@@ -655,6 +657,7 @@ def ExtractMissionInfo():
         missionDatabase.AddMainMission(newMission)
             
     except Exception as error:
+        winsound.PlaySound("./sounds/error.wav", winsound.SND_FILENAME)
         print("Error extracting mission info")
         print("An exception occurred:", error)
 
@@ -668,6 +671,7 @@ def stream():
 
 @app.route('/')
 def index():
+    _sse_queue.put("mission_added")
     return render_template('index.html', missionDatabase=missionDatabase)
 
 @app.route('/edit/<id>/<auec>', methods=['PUT'])
@@ -693,7 +697,7 @@ def AddMission():
     missionDatabase.sortedMissionManager.CheckForMissions()
     missionDatabase.locationDatabase.GenerateDropPickupList(missionDatabase,True)
     _sse_queue.put("mission_added")
-    return redirect("/")
+    return redirect('/')
 
 @app.route('/toggle/<location>', methods=['POST'])
 def ToggleLocation(location):
@@ -733,16 +737,17 @@ def tab3():
     missionDatabase.locationDatabase.GenerateDropPickupList(missionDatabase)
     return render_template('tab3.html', missionDatabase=missionDatabase)
 
-def on_hotkey():
-    AddMission()
+def on_hotkey(event):
+    if event.scan_code == 82 and event.event_type == 'down' and not event.is_keypad:
+        winsound.PlaySound("./sounds/adding_mission.wav", winsound.SND_FILENAME)
+        AddMission()
 
 def start_listener():
-    keyboard.add_hotkey('insert', on_hotkey)
+    keyboard.hook(on_hotkey)
     keyboard.wait()
 
 t = threading.Thread(target=start_listener, daemon=True)
 t.start()
-
 
 if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0')
