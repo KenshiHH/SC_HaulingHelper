@@ -650,7 +650,7 @@ def ExtractMissionInfo():
             newSubMission.AddPickupInfo(cargo, pickup)
             newSubMission.AddDropLocation(cargo,int(scu), target)
             newMission.AddSubMission(newSubMission)
-            newMission.auec = ExtractReward()
+        newMission.auec = ExtractReward()
         newMission.maxContainerSize = ExtractMaxContainerSize()
         missionDatabase.AddMainMission(newMission)
             
