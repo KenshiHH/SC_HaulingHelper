@@ -8,6 +8,12 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <title>SC Hauling Helper</title>
 </head>
+<script>
+  const es = new EventSource("/stream");
+  es.onmessage = () => {
+    htmx.ajax("GET", "/tab1", { target: "#tab-content", swap: "innerHTML" });
+  };
+</script>
 <body>
     <div id="tabs" hx-get="/tab1" hx-trigger="load" hx-target="#tab-content" hx-swap="innerHTML"></div>
     <div class="tab-list" role="tablist">

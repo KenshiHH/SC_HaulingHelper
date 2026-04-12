@@ -3,6 +3,8 @@ import pytesseract
 from flask import Flask
 from flask import render_template, request
 from flask import redirect
+from flask import Response
+from queue import Queue
 import uuid
 import ctypes
 import os
@@ -12,6 +14,10 @@ import cv2
 import numpy as np
 from collections import Counter
 import threading
+import keyboard
+
+
+_sse_queue = Queue()
 
 ####config
 DEBUG = False
@@ -442,7 +448,6 @@ class MissionDatabase:
         self.UpdateMissionIDs()
         self.UpdateCargoSCU()
         self.UpdateAUEC()
-        print(f"max container size: {mainMission.maxContainerSize}")
 
     def UpdateMissionIDs(self):
         for i in self.mainMissions:
@@ -508,7 +513,6 @@ def ExtractReward():
         print(text)
     text = text.split('\n')
 
-    print(text)
     try:
         for i in text:
             if "reward" in i.lower():
@@ -654,6 +658,14 @@ def ExtractMissionInfo():
         print("Error extracting mission info")
         print("An exception occurred:", error)
 
+@app.route("/stream")
+def stream():
+    def event_generator():
+        while True:
+            _sse_queue.get()  # blocks until hotkey fires
+            yield "data: mission_added\n\n"
+    return Response(event_generator(), mimetype="text/event-stream")
+
 @app.route('/')
 def index():
     return render_template('index.html', missionDatabase=missionDatabase)
@@ -680,6 +692,7 @@ def AddMission():
     ExtractMissionInfo()
     missionDatabase.sortedMissionManager.CheckForMissions()
     missionDatabase.locationDatabase.GenerateDropPickupList(missionDatabase,True)
+    _sse_queue.put("mission_added")
     return redirect("/")
 
 @app.route('/toggle/<location>', methods=['POST'])
@@ -720,6 +733,15 @@ def tab3():
     missionDatabase.locationDatabase.GenerateDropPickupList(missionDatabase)
     return render_template('tab3.html', missionDatabase=missionDatabase)
 
+def on_hotkey():
+    AddMission()
+
+def start_listener():
+    keyboard.add_hotkey('insert', on_hotkey)
+    keyboard.wait()
+
+t = threading.Thread(target=start_listener, daemon=True)
+t.start()
 
 
 if __name__ == '__main__':
