@@ -582,8 +582,8 @@ def CreateOcrText():
     for idx, img in enumerate(screen_list):
         img = cv2.resize(img, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
         img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-        if idx == 1:
-            img = cv2.threshold(img, 110, 255, cv2.THRESH_BINARY)[1]
+#        if idx == 1:
+#            img = cv2.threshold(img, 110, 255, cv2.THRESH_BINARY)[1]
         img = cv2.bitwise_not(img)
         if LOCALTEST:
             cv2.imwrite(f"test{idx}.jpg", img)
