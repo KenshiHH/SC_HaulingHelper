@@ -39,7 +39,7 @@ jobs:
           pyinstaller --onefile helper.py --name "SCHelper" --optimize "2" `
             --add-data "static;static" `
             --add-data "templates;templates" `
-            --add-data "Tesseract-OCR;Tesseract-OCR"
+            --add-data "Tesseract-OCR;Tesseract-OCR" `
             --add-data "sounds;sounds"
             
       - name: Upload artifact
